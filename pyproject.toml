@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "schedule-bot"
+version = "0.1.0"
+description = ""
+authors = ["Jly4 <iilya.mironov@yandex.ru>"]
+readme = "README.md"
+packages = [{include = "schedule_bot"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
