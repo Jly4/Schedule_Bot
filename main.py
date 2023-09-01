@@ -1,11 +1,14 @@
 import re
 import time
+import configs
 import calendar
 import pandas as pd
 from datetime import datetime
-import csv
+from aiogram import Bot, Dispatcher, types
 
 local_date = datetime(year=2023, month=9, day=1)
+bot = Bot(token=configs.token)
+dp = Dispatcher(bot)
 
 while True:
     last_edit = ''
@@ -21,7 +24,9 @@ while True:
 
     time.sleep(600)
 
+
 """
+import csv
 
 # Для парсинга всего сайта в csv файл.
 for i in range(2, 11):
