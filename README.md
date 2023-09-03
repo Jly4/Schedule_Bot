@@ -1,6 +1,6 @@
 # Schedule_Bot
 
-*Schedule_Bot* - a bot that will parse the class schedule from the school site. And if it has been edited, it will send it in telegram group.
+ *Schedule_Bot* - a bot that will parse the class schedule from the school site. And if it has been edited, it will send it in telegram group.
 
 *Telegram Tag*: @schedule_pars_bot
 
