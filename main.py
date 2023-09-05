@@ -1,13 +1,25 @@
 import re
 import time
-from datetime import datetime
-import pandas as pd
 import pytz
+import logging
+import pandas as pd
+from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
 #from configs import config
 import temp.temp_configs as config
+
+# log config
+basic_log = False
+debug_log = False
+
+if 'log_level' in dir(config) and config.log_level >= 1:
+    basic_log = True
+    if config.log_level >= 2:
+        debug_log = True
+    logging.basicConfig(level=logging.INFO, filename = 'bot.log', encoding = 'UTF-8', datefmt = '%Y-%m-%d %H:%M:%S')
+    log = logging.getLogger()
 
 # Получаем текущую локальную дату и время
 local_timezone = pytz.timezone('Asia/Tomsk')
@@ -39,7 +51,7 @@ async def send_photo(message: types.Message):
             # Создаем изображение
             width = sum(column_widths) * 10  # Множитель 10 для более читаемого изображения
             height = len(schedule) * 30  # Высота строки
-            image = Image.new("RGB", (width, height), (255, 255, 143))
+            image = Image.new("RGB", (width, height), (255, 255, 143)) # Создаем картинку с фоном с заданным цветом
             draw = ImageDraw.Draw(image)
 
             # Задаем моноширинный шрифт
