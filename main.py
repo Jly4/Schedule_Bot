@@ -7,8 +7,7 @@ from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
-#from configs import config
-import temp.temp_configs as config
+from configs import config
 
 # log config
 basic_log = False
@@ -18,7 +17,7 @@ if 'log_level' in dir(config) and config.log_level >= 1:
     basic_log = True
     if config.log_level >= 2:
         debug_log = True
-    logging.basicConfig(level=logging.INFO, filename = 'bot.log', encoding = 'UTF-8', datefmt = '%Y-%m-%d %H:%M:%S')
+    logging.basicConfig(level=logging.INFO, filename='bot.log', encoding='UTF-8', datefmt='%Y-%m-%d %H:%M:%S')
     log = logging.getLogger()
 
 # Получаем текущую локальную дату и время
@@ -80,7 +79,6 @@ async def send_photo(message: types.Message):
                     await message.reply_photo(photo_file, caption=f'{text_day_of_week} - Последние изменение: [{last_edit}]\n\n')
             except:
                 continue
-
 
         time.sleep(1200)
 
