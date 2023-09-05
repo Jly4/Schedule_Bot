@@ -8,6 +8,7 @@ from PIL import Image, ImageDraw, ImageFont
 from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
 from configs import config
+#from configs import tconfig as config
 
 # log config
 basic_log = False
@@ -79,8 +80,8 @@ async def send_photo(message: types.Message):
                     await message.reply_photo(photo_file, caption=f'{text_day_of_week} - Последние изменение: [{last_edit}]\n\n')
             except:
                 continue
-
-        time.sleep(1200)
+        print("last update:", local_date)
+        time.sleep(900)
 
 if __name__ == '__main__':
     print('Bot started')
