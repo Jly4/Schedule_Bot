@@ -26,7 +26,7 @@ local_timezone = pytz.timezone('Asia/Tomsk')
 local_date = datetime.now(local_timezone)
 
 # Создаем объекты бота и диспетчера
-bot = Bot(token=token)
+bot = Bot(token=config.token)
 dp = Dispatcher(bot)
 
 @dp.message_handler(commands=['notify_schedule'])
