@@ -7,8 +7,8 @@ from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
-from configs import config
-#from configs import tconfig as config
+#from configs import config
+from configs import tconfig as config
 
 # log config
 basic_log = False
@@ -72,10 +72,10 @@ async def send_photo(message: types.Message):
                 x = 10
 
             # Сохраняем изображение
-            image.save('temp/table_image.png')
+            image.save('table_image.png')
             try:
                 # Загрузите фотографию, которую хотите отправить (замените 'photo.jpg' на путь к вашей фотографии)
-                with open('temp/table_image.png', 'rb') as photo_file:
+                with open('table_image.png', 'rb') as photo_file:
                     # Отправьте фотографию пользователю
                     await message.reply_photo(photo_file, caption=f'{text_day_of_week} - Последние изменение: [{last_edit}]\n\n')
             except:
