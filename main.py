@@ -6,16 +6,15 @@ import pytz
 from PIL import Image, ImageDraw, ImageFont
 from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
-
-# import configs
-import temp.temp_configs as configs
+#from configs import config
+import temp.temp_configs as config
 
 # Получаем текущую локальную дату и время
 local_timezone = pytz.timezone('Asia/Tomsk')
 local_date = datetime.now(local_timezone)
 
 # Создаем объекты бота и диспетчера
-bot = Bot(token=configs.token)
+bot = Bot(token=config.token)
 dp = Dispatcher(bot)
 
 @dp.message_handler(commands=['notify_schedule'])
