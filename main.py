@@ -80,6 +80,7 @@ async def send_photo(message: types.Message):
                     await message.reply_photo(photo_file, caption=f'{text_day_of_week} - Последние изменение: [{last_edit}]\n\n')
             except:
                 continue
+
         print("last update:", local_date)
         time.sleep(900)
 
