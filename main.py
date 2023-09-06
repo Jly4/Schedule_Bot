@@ -73,10 +73,10 @@ async def send_photo(message: types.Message):
                 x = 10
 
             # Сохраняем изображение
-            image.save('data/table_image.png')
+            image.save('table_image.png')
             try:
                 # Загрузите фотографию, которую хотите отправить (замените 'photo.jpg' на путь к вашей фотографии)
-                with open('data/table_image.png', 'rb') as photo_file:
+                with open('table_image.png', 'rb') as photo_file:
                     # Отправьте фотографию пользователю
                     await message.reply_photo(photo_file, caption=f'{text_day_of_week} - Последние изменение: [{last_edit}]\n\n')
             except:
