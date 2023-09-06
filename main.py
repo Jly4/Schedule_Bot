@@ -42,7 +42,8 @@ async def send_photo(message: types.Message):
         if last_edit != edit:
             last_edit = edit
             day_of_week = local_date.weekday()
-            if local_date.hour > 15:
+            print(local_date.hour)
+            if local_date.hour >= 15:
                 day_of_week += 1
             text_day_of_week = {0:'Понедельник', 1:'Вторник', 2:'Среда', 3:'Четверг', 4:'Пятница', 5:'Суббота', 6:'Понедельник'}[day_of_week]
             schedule = schedule[4 + day_of_week % 5 - day_of_week // 5].fillna('-').iloc[:, 1:]
@@ -72,10 +73,10 @@ async def send_photo(message: types.Message):
                 x = 10
 
             # Сохраняем изображение
-            image.save('table_image.png')
+            image.save('data/table_image.png')
             try:
                 # Загрузите фотографию, которую хотите отправить (замените 'photo.jpg' на путь к вашей фотографии)
-                with open('table_image.png', 'rb') as photo_file:
+                with open('data/table_image.png', 'rb') as photo_file:
                     # Отправьте фотографию пользователю
                     await message.reply_photo(photo_file, caption=f'{text_day_of_week} - Последние изменение: [{last_edit}]\n\n')
             except:
