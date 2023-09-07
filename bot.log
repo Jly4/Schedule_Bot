@@ -30173,3 +30173,198 @@ Traceback (most recent call last):
   File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-KNSgyF6R-py3.11\Lib\site-packages\aiogram\utils\exceptions.py", line 140, in detect
     raise err(cls.text or description)
 aiogram.utils.exceptions.TerminatedByOtherGetUpdates: Terminated by other getupdates request; make sure that only one bot instance is running
+INFO:aiogram:Bot: Schedule Bot [@schedule_pars_bot]
+INFO:aiogram.dispatcher.dispatcher:Start polling.
+INFO:aiogram:Bot: Schedule Bot [@schedule_pars_bot]
+INFO:aiogram.dispatcher.dispatcher:Start polling.
+INFO:aiogram:Bot: Schedule Bot [@schedule_pars_bot]
+INFO:aiogram.dispatcher.dispatcher:Start polling.
+INFO:aiogram.dispatcher.dispatcher:Stop polling...
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished name='Task-7' coro=<Dispatcher._process_polling_updates() done, defined at C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\dispatcher.py:407> exception=KeyboardInterrupt()>
+Traceback (most recent call last):
+  File "E:\Area\IntelliJ\Schedule_Bot\main.py", line 92, in <module>
+    executor.start_polling(dp, skip_updates=False, relax = 1)
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\utils\executor.py", line 45, in start_polling
+    executor.start_polling(
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\utils\executor.py", line 328, in start_polling
+    loop.run_until_complete(self._shutdown_polling())
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 640, in run_until_complete
+    self.run_forever()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\windows_events.py", line 321, in run_forever
+    super().run_forever()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 607, in run_forever
+    self._run_once()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 1922, in _run_once
+    handle._run()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\dispatcher.py", line 415, in _process_polling_updates
+    for responses in itertools.chain.from_iterable(await self.process_updates(updates, fast)):
+                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\dispatcher.py", line 235, in process_updates
+    return await asyncio.gather(*tasks)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\utils\executor.py", line 323, in start_polling
+    loop.run_forever()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\windows_events.py", line 321, in run_forever
+    super().run_forever()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 607, in run_forever
+    self._run_once()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 1922, in _run_once
+    handle._run()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\handler.py", line 117, in notify
+    response = await handler_obj.handler(*args, **partial_data)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\dispatcher.py", line 256, in process_update
+    return await self.message_handlers.notify(update.message)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\handler.py", line 117, in notify
+    response = await handler_obj.handler(*args, **partial_data)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Area\IntelliJ\Schedule_Bot\main.py", line 88, in send_photo
+    time.sleep(900)
+KeyboardInterrupt
+INFO:aiogram:Bot: Schedule Bot [@schedule_pars_bot]
+INFO:aiogram.dispatcher.dispatcher:Start polling.
+INFO:aiogram.dispatcher.dispatcher:Stop polling...
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished name='Task-7' coro=<Dispatcher._process_polling_updates() done, defined at C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\dispatcher.py:407> exception=KeyboardInterrupt()>
+Traceback (most recent call last):
+  File "E:\Area\IntelliJ\Schedule_Bot\main.py", line 92, in <module>
+    executor.start_polling(dp, skip_updates=False, relax=1)
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\utils\executor.py", line 45, in start_polling
+    executor.start_polling(
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\utils\executor.py", line 328, in start_polling
+    loop.run_until_complete(self._shutdown_polling())
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 640, in run_until_complete
+    self.run_forever()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\windows_events.py", line 321, in run_forever
+    super().run_forever()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 607, in run_forever
+    self._run_once()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 1922, in _run_once
+    handle._run()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\dispatcher.py", line 415, in _process_polling_updates
+    for responses in itertools.chain.from_iterable(await self.process_updates(updates, fast)):
+                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\dispatcher.py", line 235, in process_updates
+    return await asyncio.gather(*tasks)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\utils\executor.py", line 323, in start_polling
+    loop.run_forever()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\windows_events.py", line 321, in run_forever
+    super().run_forever()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 607, in run_forever
+    self._run_once()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 1922, in _run_once
+    handle._run()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\handler.py", line 117, in notify
+    response = await handler_obj.handler(*args, **partial_data)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\dispatcher.py", line 256, in process_update
+    return await self.message_handlers.notify(update.message)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\handler.py", line 117, in notify
+    response = await handler_obj.handler(*args, **partial_data)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Area\IntelliJ\Schedule_Bot\main.py", line 88, in send_photo
+    time.sleep(900)
+KeyboardInterrupt
+INFO:aiogram:Bot: Schedule Bot [@schedule_pars_bot]
+INFO:aiogram.dispatcher.dispatcher:Start polling.
+INFO:aiogram.dispatcher.dispatcher:Stop polling...
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished name='Task-7' coro=<Dispatcher._process_polling_updates() done, defined at C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\dispatcher.py:407> exception=KeyboardInterrupt()>
+Traceback (most recent call last):
+  File "E:\Area\IntelliJ\Schedule_Bot\main.py", line 92, in <module>
+    executor.start_polling(dp, skip_updates=False, relax=1)
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\utils\executor.py", line 45, in start_polling
+    executor.start_polling(
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\utils\executor.py", line 328, in start_polling
+    loop.run_until_complete(self._shutdown_polling())
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 640, in run_until_complete
+    self.run_forever()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\windows_events.py", line 321, in run_forever
+    super().run_forever()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 607, in run_forever
+    self._run_once()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 1922, in _run_once
+    handle._run()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\dispatcher.py", line 415, in _process_polling_updates
+    for responses in itertools.chain.from_iterable(await self.process_updates(updates, fast)):
+                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\dispatcher.py", line 235, in process_updates
+    return await asyncio.gather(*tasks)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\utils\executor.py", line 323, in start_polling
+    loop.run_forever()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\windows_events.py", line 321, in run_forever
+    super().run_forever()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 607, in run_forever
+    self._run_once()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 1922, in _run_once
+    handle._run()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\handler.py", line 117, in notify
+    response = await handler_obj.handler(*args, **partial_data)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\dispatcher.py", line 256, in process_update
+    return await self.message_handlers.notify(update.message)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\handler.py", line 117, in notify
+    response = await handler_obj.handler(*args, **partial_data)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Area\IntelliJ\Schedule_Bot\main.py", line 88, in send_photo
+    time.sleep(900)
+KeyboardInterrupt
+INFO:aiogram:Bot: Schedule Bot [@schedule_pars_bot]
+INFO:aiogram.dispatcher.dispatcher:Start polling.
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished name='Task-7' coro=<Dispatcher._process_polling_updates() done, defined at C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\dispatcher.py:407> exception=BadRequest('Replied message not found')>
+Traceback (most recent call last):
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\dispatcher.py", line 415, in _process_polling_updates
+    for responses in itertools.chain.from_iterable(await self.process_updates(updates, fast)):
+                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\dispatcher.py", line 235, in process_updates
+    return await asyncio.gather(*tasks)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\handler.py", line 117, in notify
+    response = await handler_obj.handler(*args, **partial_data)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\dispatcher.py", line 256, in process_update
+    return await self.message_handlers.notify(update.message)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\dispatcher\handler.py", line 117, in notify
+    response = await handler_obj.handler(*args, **partial_data)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Area\IntelliJ\Schedule_Bot\main.py", line 85, in send_photo
+    await message.reply_photo(photo_file, caption=f'{text_day_of_week} - Последние изменение: [{Last_update}]\n\n')
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\types\message.py", line 1760, in reply_photo
+    return await self.bot.send_photo(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\bot\bot.py", line 565, in send_photo
+    result = await self.request(api.Methods.SEND_PHOTO, payload, files)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\bot\base.py", line 236, in request
+    return await api.make_request(await self.get_session(), self.server, self.__token, method, data, files,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\bot\api.py", line 140, in make_request
+    return check_result(method, response.content_type, response.status, await response.text())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\bot\api.py", line 115, in check_result
+    exceptions.BadRequest.detect(description)
+  File "C:\Users\user\AppData\Local\pypoetry\Cache\virtualenvs\schedule-bot-URf48MFE-py3.11\Lib\site-packages\aiogram\utils\exceptions.py", line 141, in detect
+    raise cls(description)
+aiogram.utils.exceptions.BadRequest: Replied message not found
+INFO:aiogram.dispatcher.dispatcher:Stop polling...
+WARNING:aiogram:Goodbye!

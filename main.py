@@ -10,6 +10,7 @@ from aiogram.utils import executor
 #from configs import config
 from configs import tconfig as config
 
+
 # log config
 basic_log = False
 debug_log = False
@@ -21,9 +22,6 @@ if 'log_level' in dir(config) and config.log_level >= 1:
     logging.basicConfig(level=logging.INFO, filename='bot.log', encoding='UTF-8', datefmt='%Y-%m-%d %H:%M:%S')
     log = logging.getLogger()
 
-# Получаем текущую локальную дату и время
-local_timezone = pytz.timezone('Asia/Tomsk')
-local_date = datetime.now(local_timezone)
 
 # Создаем объекты бота и диспетчера
 bot = Bot(token=config.token)
@@ -31,23 +29,30 @@ dp = Dispatcher(bot)
 
 @dp.message_handler(commands=['notify_schedule'])
 async def send_photo(message: types.Message):
-    last_edit = ''
+
+    # Получаем текущую локальную дату и время
+    local_timezone = pytz.timezone('Asia/Tomsk')
+    local_date = datetime.now(local_timezone)
+
+    datetime_pattern = r'\d{2}\.\d{2}\.\d{4}\. (\d{2}:\d{2}:\d{2})' # паттерн  для поиска даты последн. изменения в датафрейме
+    Last_update = '' # Переменная последнего изменения
     print('schedule printing started')
-    # schedule parsing
+
+    # получение расписания
     while True:
         schedule = pd.read_html("https://lyceum.tom.ru/raspsp/index.php?k=b11&s=1", keep_default_na=True, encoding="cp1251") # ptcp154, also work
-        datetime_pattern = r'\d{2}\.\d{2}\.\d{4}\. (\d{2}:\d{2}:\d{2})'
-        edit = re.search(datetime_pattern, schedule[3][0][0]).group()
+        last_schedule_edit = re.search(datetime_pattern, schedule[3][0][0]).group() # Получаем нужный датафрейм из списка датафреймов сайта
 
-        if last_edit != edit:
-            last_edit = edit
-            day_of_week = local_date.weekday()
-            print(local_date.hour)
+        if Last_update != last_schedule_edit:
+            Last_update = last_schedule_edit # обовляем время последнего отправленного расписания
+            day_of_week = local_date.weekday() # номер дня недели 0-6
+
             if local_date.hour >= 15:
                 day_of_week += 1
+
             text_day_of_week = {0:'Понедельник', 1:'Вторник', 2:'Среда', 3:'Четверг', 4:'Пятница', 5:'Суббота', 6:'Понедельник'}[day_of_week]
             schedule = schedule[4 + day_of_week % 5 - day_of_week // 5].fillna('-').iloc[:, 1:]
-            column_widths = [max(schedule[col].astype(str).apply(len).max(), len(str(col))) for col in schedule.columns]
+            column_widths = [max(schedule[col].astype(str).apply(len).max() + 1, len(str(col))) for col in schedule.columns]
 
             # Создаем изображение
             width = sum(column_widths) * 10  # Множитель 10 для более читаемого изображения
@@ -62,8 +67,6 @@ async def send_photo(message: types.Message):
             x, y = 10, 10
 
             # Рисуем таблицу
-            #draw.text((x, y), f'{text_day_of_week} - Последние изменение: [{last_edit}]\n\n', fill="black", font=font)
-            #y += 30
             for index, row in schedule.iterrows():
                 for i, (col, width) in enumerate(zip(schedule.columns, column_widths)):
                     text = str(row[col])
@@ -73,18 +76,17 @@ async def send_photo(message: types.Message):
                 x = 10
 
             # Сохраняем изображение
-            image.save('table_image.png')
-            try:
-                # Загрузите фотографию, которую хотите отправить (замените 'photo.jpg' на путь к вашей фотографии)
-                with open('table_image.png', 'rb') as photo_file:
-                    # Отправьте фотографию пользователю
-                    await message.reply_photo(photo_file, caption=f'{text_day_of_week} - Последние изменение: [{last_edit}]\n\n')
-            except:
-                continue
+            image.save('temp/schedule.png')
+            print('image saved')
+
+            # Загрузите фотографию, которую хотите отправить
+            with open('temp/schedule.png', 'rb') as photo_file:
+                # Отправьте фотографию пользователю
+                await message.reply_photo(photo_file, caption=f'{text_day_of_week} - Последние изменение: [{Last_update}]\n\n')
 
         print("last update:", local_date)
         time.sleep(900)
 
 if __name__ == '__main__':
     print('Bot started')
-    executor.start_polling(dp, skip_updates=False, relax = 1)
+    executor.start_polling(dp, skip_updates=False, relax=1)

@@ -1,3 +1,5 @@
-temp/
+temp/*.csv
+temp/*.py
 configs/tconfig.py
+bot.log
 .idea/
