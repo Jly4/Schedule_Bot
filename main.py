@@ -45,11 +45,11 @@ async def send_photo(message: types.Message):
         if Last_update != last_schedule_edit:
             Last_update = last_schedule_edit # обовляем время последнего отправленного расписания
             day_of_week = local_date.weekday() # номер дня недели 0-6
+            text_day_of_week = {0:'Понедельник', 1:'Вторник', 2:'Среда', 3:'Четверг', 4:'Пятница', 5:'Суббота', 6:'Понедельник'}[day_of_week]
 
             if local_date.hour >= 15:
                 day_of_week += 1
 
-            text_day_of_week = {0:'Понедельник', 1:'Вторник', 2:'Среда', 3:'Четверг', 4:'Пятница', 5:'Суббота', 6:'Понедельник'}[day_of_week]
             schedule = schedule[3 + (day_of_week + 1) % 7].fillna('-').iloc[:, 1:]
             column_widths = [max(schedule[col].astype(str).apply(len).max() + 1, len(str(col))) for col in schedule.columns]
 
