@@ -26,6 +26,8 @@ if 'log_level' in dir(config) and config.log_level >= 1:
 bot = Bot(token=config.token)
 dp = Dispatcher(bot)
 
+
+
 def generate_image(schedule):
     # Задаем ширину строки
     column_widths = [max(schedule[col].astype(str).apply(len).max() + 1, len(str(col))) for col in schedule.columns]
@@ -54,36 +56,41 @@ def generate_image(schedule):
 
     # Сохраняем изображение
     image.save('temp/schedule.png')
-    print('image saved')
+
 
 @dp.message_handler(commands=['notify_schedule'])
 async def send_photo(message: types.Message):
 
     # паттерн  для поиска даты последн. изменения в датафрейме
     datetime_pattern = r'\d{2}\.\d{2}\.\d{4}\. (\d{2}:\d{2}:\d{2})'
+    local_timezone = pytz.timezone(config.local_timezone_cfg)
+    local_date = datetime.now(local_timezone)
 
     # Переменная для хранения времени последней проверки расписания
-    last_check = '' # Переменная последнего изменения
+    last_print_time = '' # Переменная последнего изменения
+    last_print_time_hour = local_date.hour # час последнего изменения
     print('schedule printing started')
 
 
     while True:
 
-        # Получаем текущую локальную дату и время
-        local_timezone = pytz.timezone('Asia/Tomsk')
+        # Обновляем текущую локальную дату и время
         local_date = datetime.now(local_timezone)
+
 
         # Получение данных со страницы с расписанием
         schedule = pd.read_html("https://lyceum.tom.ru/raspsp/index.php?k=b11&s=1", keep_default_na=True, encoding="cp1251") # ptcp154, also work
 
         # Получаем время последнего изменения расписания
-        schedule_change = re.search(datetime_pattern, schedule[3][0][0]).group()
+        schedule_change_time = re.search(datetime_pattern, schedule[3][0][0]).group()
 
-        # Проверяем изменилось ли расписание с момента последнего уведомления
-        if last_check != schedule_change:
+        # Проверяем изменилось ли расписание с момента последнего уведомления.
+        # или
+        # Если сейчас больше 8 или позже и после 15 расписание не присылалось.
+        if last_print_time != schedule_change_time or (local_date.hour >= 20 and (last_print_time_hour < 15 or last_print_time[:2] != str(local_date.day))):
 
             # обовляем время последнего отправленного расписания
-            last_check = schedule_change
+            last_print_time = schedule_change_time
             day_of_week = local_date.weekday() # номер дня недели 0-6
 
             # Правила для отправки расписания на следующий день
@@ -110,11 +117,13 @@ async def send_photo(message: types.Message):
                     # Открываем фотографию, которую хотим отправить
                     with open('temp/schedule.png', 'rb') as photo_file:
                         # Отправляем фотографию
-                        await message.reply_photo(photo_file, caption=f'{text_day_of_week} - Последние изменение: [{last_check}]\n\n')
+                        await message.reply_photo(photo_file, caption=f'{text_day_of_week} - Последние изменение: [{last_print_time}]\n\n')
+                        last_print_time_hour = local_date.hour
                     break
 
                 except:
                     continue
+
         # печаетаем время последней проверки расписания
         print("last update:", local_date)
 
