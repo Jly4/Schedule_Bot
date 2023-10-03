@@ -67,7 +67,9 @@ async def send_photo(message: types.Message):
     local_date = datetime.now(local_timezone)
 
     # Переменная для хранения времени последней проверки расписания
-    last_print_time = '' # Переменная последнего изменения
+    last_print_schedule = '' # Переменная последнего изменения
+    last_print_time_day = local_date.day # переменная дня печати
+    prev_schedule = 0 # Переменная послденего отправленного расписания
     last_print_time_hour = local_date.hour # час последнего изменения
     print('schedule printing started')
 
@@ -87,10 +89,10 @@ async def send_photo(message: types.Message):
         # Проверяем изменилось ли расписание с момента последнего уведомления.
         # или
         # Если сейчас больше 8 или позже и после 15 расписание не присылалось.
-        if last_print_time != schedule_change_time or (local_date.hour >= 20 and (last_print_time_hour < 15 or last_print_time[:2] != str(local_date.day))):
+        if last_print_schedule != schedule_change_time or (local_date.hour >= 20 and (last_print_time_hour < 15 or last_print_time_day != local_date.day)):
 
             # обовляем время последнего отправленного расписания
-            last_print_time = schedule_change_time
+            last_print_schedule = schedule_change_time
             day_of_week = local_date.weekday() # номер дня недели 0-6
 
             # Правила для отправки расписания на следующий день
@@ -98,14 +100,17 @@ async def send_photo(message: types.Message):
                 if local_date.hour >= 10:
                     day_of_week = 0
             else:
-                if local_date.hour >= 15:
-                        day_of_week += 1
+                if local_date.hour >= 15 or prev_schedule != 0 and prev_schedule == (schedule[3 + (day_of_week + 1) % 7].fillna('-').iloc[:, 1:]):
+                    day_of_week += 1
 
             # Переменная содержащая день недели в текстовом виде
             text_day_of_week = {0:'Понедельник', 1:'Вторник', 2:'Среда', 3:'Четверг', 4:'Пятница', 5:'Суббота'}[day_of_week]
 
             # Получаем таблицу с раписанием нужного дня из датафрейма
             schedule = schedule[3 + (day_of_week + 1) % 7].fillna('-').iloc[:, 1:]
+
+            # Обновляем последние отправленное расписание
+            prev_schedule = schedule
 
             # генерируем изображение в папку temp
             generate_image(schedule)
@@ -117,7 +122,8 @@ async def send_photo(message: types.Message):
                     # Открываем фотографию, которую хотим отправить
                     with open('temp/schedule.png', 'rb') as photo_file:
                         # Отправляем фотографию
-                        await message.reply_photo(photo_file, caption=f'{text_day_of_week} - Последние изменение: [{last_print_time}]\n\n')
+                        await message.reply_photo(photo_file, caption=f'{text_day_of_week} - Последние изменение: [{last_print_schedule}]\n\n')
+                        last_print_time_day = local_date.day
                         last_print_time_hour = local_date.hour
                     break
 
