@@ -39,7 +39,7 @@ def generate_image(schedule):
     draw = ImageDraw.Draw(image)
 
     # Создаем шрифт по умолчанию для PIL
-    #font = ImageFont.truetype("DejaVuSans.ttf", 18) # для linux
+    #font = ImageFont.truetype("DejaVuSans.ttf", 16) # для linux
     font = ImageFont.truetype("arial.ttf", 18) # для винды
 
     # Устанавливаем начальные координаты для текста
@@ -89,7 +89,7 @@ async def send_photo(message: types.Message):
         # Проверяем изменилось ли расписание с момента последнего уведомления.
         # или
         # Если сейчас больше 8 или позже и после 15 расписание не присылалось.
-        if last_print_schedule != schedule_change_time or (local_date.hour >= 20 and (last_print_time_hour < 15 or last_print_time_day != local_date.day)):
+        if (last_print_schedule != schedule_change_time and local_date.day != 5) or (local_date.hour >= 20 and (local_date.day != 5 and (last_print_time_hour < 15 or last_print_time_day != local_date.day))):
 
             # обовляем время последнего отправленного расписания
             last_print_schedule = schedule_change_time
