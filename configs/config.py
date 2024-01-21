@@ -1,6 +1,13 @@
 # bot token
 token = ''
 
+# chat id
+chat_id = -917667917
+
+# start_sticker
+sticker_id = ''
+
+
 # pytz timezone config
 local_timezone_cfg = 'Asia/Tomsk'
 

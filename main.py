@@ -5,7 +5,7 @@ from datetime import datetime
 import pandas as pd
 import pytz
 from PIL import Image, ImageDraw, ImageFont
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher
 from aiogram.utils import executor
 # from configs import config
 from configs import tconfig as config
@@ -25,7 +25,6 @@ if 'log_level' in dir(config) and config.log_level >= 1:
 # Создаем объекты бота и диспетчера
 bot = Bot(token=config.token)
 dp = Dispatcher(bot)
-
 
 
 def generate_image(schedule):
@@ -58,8 +57,9 @@ def generate_image(schedule):
     image.save('temp/schedule.png')
 
 
-@dp.message_handler(commands=['notify_schedule'])
-async def send_photo(message: types.Message):
+async def shedule_sending(dp):
+    # start indicator
+    await bot.send_sticker(config.chat_id, config.sticker_id, disable_notification=True)
 
     # паттерн  для поиска даты последн. изменения в датафрейме
     datetime_pattern = r'\d{2}\.\d{2}\.\d{4}\. (\d{2}:\d{2}:\d{2})'
@@ -120,7 +120,7 @@ async def send_photo(message: types.Message):
                     # Открываем фотографию, которую хотим отправить
                     with open('temp/schedule.png', 'rb') as photo_file:
                         # Отправляем фотографию
-                        await message.reply_photo(photo_file, caption=f'{text_day_of_week} - Последние изменение: [{last_print_schedule}]\n\n')
+                        await bot.send_photo(config.chat_id, photo_file, f'{text_day_of_week} - Последние изменение: [{last_print_schedule}]\n\n')
                         last_print_time_day = local_date.day
                         last_print_time_hour = local_date.hour
                     break
@@ -136,4 +136,4 @@ async def send_photo(message: types.Message):
 
 if __name__ == '__main__':
     print('Bot started')
-    executor.start_polling(dp, skip_updates=False, relax=1)
+    executor.start_polling(dp, skip_updates=False, relax=1, on_startup=shedule_sending)
