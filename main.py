@@ -59,6 +59,7 @@ def generate_image(schedule):
 
 async def shedule_sending(dp):
     # start indicator
+    await bot.send_message(config.chat_id, 'Стартуем...', disable_notification=True)
     await bot.send_sticker(config.chat_id, config.sticker_id, disable_notification=True)
 
     # паттерн  для поиска даты последн. изменения в датафрейме
@@ -75,11 +76,24 @@ async def shedule_sending(dp):
 
 
     while True:
-
         # Обновляем текущую локальную дату и время
         local_date = datetime.now(local_timezone)
-        # Получение данных со страницы с расписанием
-        schedule = pd.read_html("https://lyceum.tom.ru/raspsp/index.php?k=b11&s=1", keep_default_na=True, encoding="cp1251") # ptcp154, also work
+
+        # Цикл для избежания ошибок из-за недоступности сайта
+        while True:
+            try:
+                # Получение данных со страницы с расписанием
+                schedule = pd.read_html("https://lyceum.tom.ru/raspsp/index.php?k=b11&s=1", keep_default_na=True, encoding="cp1251") # ptcp154, also work
+                break
+
+            except:
+                # Уведомление о недоступности сайта
+                await bot.send_message(config.chat_id, 'Сайт умер. Следующая попытка через 30м.', disable_notification=True)
+
+                # timer
+                time.sleep(1800)
+                continue
+
 
         # Получаем время последнего изменения расписания
         schedule_change_time = re.search(datetime_pattern, schedule[3][0][0]).group()
