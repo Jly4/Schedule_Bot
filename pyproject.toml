@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "schedule-bot"
-version = "0.1.0"
+version = "0.0.0"
 description = ""
 authors = ["Jly4 <iilya.mironov@yandex.ru>"]
 readme = "README.md"
