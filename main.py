@@ -38,9 +38,10 @@ local_timezone = pytz.timezone('Asia/Tomsk')
 # Переменная для хранения времени последней проверки расписания
 last_print_time = 'еще не проверялось'  # Переменная последнего изменения
 last_check_schedule = 'еще не проверялось'  # Переменная последнего изменения
-prev_schedule = list()  # Переменная послднего отправленного расписания
+prev_schedule = pd.DataFrame()  # Переменная последнего отправленного расписания
 last_print_time_day = 0
 last_print_time_hour = 25
+
 
 # функция для получения получение дня недели в текстовом виде
 def text_day_of_week(schedule_day):
@@ -76,6 +77,10 @@ def generate_image(formatted_schedule):
 
     # Сохраняем изображение
     image.save('temp/schedule.png')
+
+# функция, которая достает и форматирует из датафрейма расписание на день переданный в нее
+def formatted_schedule_for_day(schedule, schedule_day):
+    return schedule[4 + schedule_day].fillna('-').iloc[:, 1:]
 
 
 # запуск бота
@@ -114,11 +119,11 @@ async def schedule_auto_sending():
     global last_print_time  # Переменная последнего изменения
     global last_check_schedule  # Переменная последнего изменения
     global last_print_time_day  # День последнего изменения
-    global prev_schedule  # Переменная послденего отправленного расписания
+    global prev_schedule  # Переменная последнего отправленного расписания
     global last_print_time_hour  # час последнего изменения
     schedule = list()
 
-    # паттерн  для поиска даты последн. изменения в датафрейме
+    # Паттерн для поиска даты последнего изменения в датафрейме
     datetime_pattern = r'\d{2}\.\d{2}\.\d{4}\. (\d{2}:\d{2}:\d{2})'
     while True:
         # Обновляем текущую локальную дату и время
@@ -147,14 +152,10 @@ async def schedule_auto_sending():
                 await asyncio.sleep(config.auto_send_delay)
                 continue
 
-
-
-
-
         # Получаем время последнего изменения расписания
         schedule_change_time = re.search(datetime_pattern, schedule[3][0][0]).group()
 
-        # Функция определяет будет ли выполняться отправка расписания и если да, то на какой день недели
+        # Функция определяет, будет ли выполняться отправка расписания и если да, то на какой день недели
         # Функция возвращает лист [0, 0]. Первая цифра отвечает за то, будет ли выполняться отправка, вторая за то в какой день она будет выполняться
         def send_logic(local_date, schedule_change_time, last_print_time, schedule, prev_schedule, last_print_time_day, last_print_time_hour):
 
@@ -165,10 +166,10 @@ async def schedule_auto_sending():
             site_schedule_change = last_print_time != schedule_change_time
 
             # изменилось ли расписание текущего дня
-            printed_schedule_change = not ((prev_schedule == schedule) and (last_print_time_day != local_date.day))
+            printed_schedule_change = not ((prev_schedule.equals(formatted_schedule_for_day(schedule, weekday))) and (last_print_time_day != local_date.day))
 
             # сейчас не ( (суббота и больше 9) или (воскресенье и меньше 20) )
-            weekend_condition = not ((weekday == 5 and hour > 9) or (weekday == 6 and hour < 20))
+            weekend_condition = not ((int(weekday) == 5 and int(hour) > 9) or (int(weekday) == 6 and int(hour) < 20))
 
             # Отправлялось ли сегодня расписание на завтра
             print_to_tomorrow = last_print_time_day == local_date.day and last_print_time_hour < 15
@@ -186,12 +187,12 @@ async def schedule_auto_sending():
                     result = [0, 0]  # то не отправляем
             else:
                 if print_to_tomorrow:  # если больше 20, и сегодня не печаталось
-                    result = [0, 0]  # то не отправляем
-                else:
                     if hour > 20:
                         result = [1, 1]  # то отправляем на завтра
                     else:
                         result = [0, 0]  # то не отправляем
+                else:
+                    result = [0, 0]  # то не отправляем
 
             # меняем воскресенье после 20 на понедельник
             result[1] = (local_date.weekday() + result[1]) % 7
@@ -203,7 +204,7 @@ async def schedule_auto_sending():
             # result[1] = local_date.day + result[1]
             #
             # # меняем воскресенье после 20 на понедельник
-            # result[1] == 0 if local_date.day + result[1] == 7 else local_date.day + result[1]
+            # result[1] = 0 if local_date.day + result[1] == 7 else local_date.day + result[1]
 
         # send_logic
         send_logic_res = send_logic(local_date, schedule_change_time, last_print_time, schedule, prev_schedule, last_print_time_day, last_print_time_hour)
@@ -217,13 +218,8 @@ async def schedule_auto_sending():
             # определяем нужный день для отправки расписания
             schedule_day = send_logic_res[1]
 
-            # функция, которая достает и форматирует из датафрейма расписание на день переданный в нее
-            def formatted_schedule_for_day(schedule_day):
-                nonlocal schedule
-                return schedule[4 + schedule_day].fillna('-').iloc[:, 1:]
-
             # Получаем форматированную таблицу с расписанием
-            formatted_schedule = formatted_schedule_for_day(schedule_day)
+            formatted_schedule = formatted_schedule_for_day(schedule, schedule_day)
 
             # сохраняем последнее отправленное расписание
             prev_schedule = formatted_schedule
