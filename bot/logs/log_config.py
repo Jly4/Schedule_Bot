@@ -28,7 +28,7 @@ def loguru_config():
     # Пересоздаем обработчик
     logger.add(sink=sys.stdout,
                colorize=True,
-               backtrace=True,
+               backtrace=False,
                diagnose=True,
                catch=True,
                format=log_format,
@@ -43,7 +43,8 @@ def loguru_config():
                compression='zip',
                enqueue=True,
                backtrace=True,
-               diagnose=True)
+               diagnose=True,
+               catch=True)
 
     # сообщение о старте
     logger.opt(colors=True).info(f'<r>Bot started</>')

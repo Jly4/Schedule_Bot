@@ -12,7 +12,7 @@ from PIL import Image, ImageDraw, ImageFont
 from bot.init_bot import bot
 from bot.configs import config
 from bot.databases.database import bot_database as db
-from bot.utils.utils import delete_msg_by_column_name
+from bot.utils.utils import del_msg_by_db_name
 from loguru import logger
 
 # Подавление предупреждений BeautifulSoup
@@ -208,7 +208,7 @@ async def send_schedule(chat_id: int,  now: int = 0):
     # Отправляем расписание если send_logic_res[0] == 1
     if send_logic_res[0] or now:
         # Удаление предыдущего расписания
-        await delete_msg_by_column_name(chat_id, 'last_schedule_message_id')
+        await del_msg_by_db_name(chat_id, 'last_schedule_message_id')
 
         # обновляем время последнего отправленного расписания
         last_print_time = local_date.strftime('%d.%m.%Y. %H:%M:%S')

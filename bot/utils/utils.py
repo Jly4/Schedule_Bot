@@ -10,38 +10,36 @@ from bot.keyboards import keyboards as kb
 from bot.init_bot import bot
 
 
-async def delete_msg_by_id(chat_id: int, message_id: types.message_id, message_name: str = '') -> None:
+async def del_msg_by_id(chat_id: int, message_id: types.message_id, message_name: str = '') -> None:
     try:
         await bot.delete_message(chat_id, message_id)  # deleting message
     except (MessageToDeleteNotFound, MessageIdentifierNotSpecified):
-        logger.opt(colors=True).error(f'<y>Error deleting message: <r>{message_name}, </>error: </>'
-                                      f'<r>MessageToDeleteNotFound</>')
+        logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".ljust(15)} | </>message: <r>{message_name},</>'
+                                      f' error: </><r>MessageToDeleteNotFound</>')
     except Exception as e:
-        logger.opt(exception=True, colors=True).error(f'<y>Error deleting message: <r>{message_name}, </>error: </>'
-                                                      f'<r>{e}</>')
+        logger.opt(exception=True, colors=True).error(
+            f'<yellow>chat_id: <r>{f"{chat_id}".ljust(15)} | </>message: <r>{message_name}</>'
+            f'</>error: </><r>{e}</>')
 
 
-async def delete_msg_by_column_name(chat_id: int, message_id_column_name: Union[int, str]) -> None:
-    logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".ljust(15)} | </> message: <r>{message_id_column_name}</></>')
+async def del_msg_by_db_name(chat_id: int, message_id_column_name: Union[int, str]) -> None:
+    logger.opt(colors=True).debug(
+        f'<yellow>chat_id: <r>{f"{chat_id}".ljust(15)} | </>message: <r>{message_id_column_name}</></>')
+
     message_id: int = await db.get_db_data(chat_id, message_id_column_name)  # Получение id сообщения
 
-    await delete_msg_by_id(chat_id, message_id, message_id_column_name)
+    await del_msg_by_id(chat_id, message_id, message_id_column_name)
 
 
 async def settings(chat_id: int) -> None:
-    logger.opt(colors=True).debug(f'(chat_id: {chat_id}) starting')
+    logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".ljust(15)} | </>started</>')
 
-    # получаем настройки пользователя
-    status_message_id = await db.get_status_msg_id(chat_id)
+    from bot.utils.status import send_status
+    await send_status(chat_id, edit=1, keyboard=kb.settings())
 
-    # обновляем сообщение со статусом
-    status_text = await status_message_text(chat_id)
-
-    # отправляем сообщение с найстркоами
-    await bot.edit_message_text(chat_id=chat_id,
-                                text=status_text,
-                                message_id=status_message_id,
-                                reply_markup=kb.settings())
+    status_msg_id = await db.get_status_msg_id(chat_id)
+    for id in range(status_msg_id-1, status_msg_id-5, -1):
+        await del_msg_by_id(chat_id, id)
 
 
 async def status_message_text(chat_id: int) -> str:
@@ -120,11 +118,11 @@ async def disable_bot(query: Union[types.CallbackQuery, types.Message]) -> None:
     if chat_type == 'private':
         status_id = await db.get_status_msg_id(chat_id)
         for msg_id in range(status_id + 10, status_id - 10, -1):
-            await delete_msg_by_id(chat_id, msg_id)
+            await del_msg_by_id(chat_id, msg_id)
 
     # Удаляем сообщений бота
-    await delete_msg_by_column_name(chat_id, 'last_schedule_message_id')
-    await delete_msg_by_column_name(chat_id, 'last_status_message_id')
+    await del_msg_by_db_name(chat_id, 'last_schedule_message_id')
+    await del_msg_by_db_name(chat_id, 'last_status_message_id')
 
     await db.update_db_data(chat_id,
                             auto_schedule=0,
@@ -142,8 +140,8 @@ async def start_command(chat_id: int) -> None:
 
     await db.update_db_data(chat_id, auto_schedule=0, bot_enabled=1)
 
-    await delete_msg_by_column_name(chat_id, 'last_status_message_id')
-    await delete_msg_by_column_name(chat_id, 'last_disable_message_id')
+    await del_msg_by_db_name(chat_id, 'last_status_message_id')
+    await del_msg_by_db_name(chat_id, 'last_disable_message_id')
 
 
 async def get_admins_id_list(chat_id: int) -> list:
@@ -163,16 +161,15 @@ async def get_admins_id_list(chat_id: int) -> list:
         return admins_list
 
 
-async def task_not_running(task_name: str) -> bool:
+async def task_not_running(chat_id: int, task_name: str) -> bool:
     all_tasks = asyncio.all_tasks()
 
     for task in all_tasks:
         if task.get_name() == task_name and not task.done():
-            logger.opt(colors=True).info(f'<yellow>{task_name}: <r>Running</></>')
-
+            logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".ljust(15)} | </>task: <r>{task_name} </>already started</>\n')
             return False
 
-    logger.opt(colors=True).info(f'<yellow>{task_name}: <r>Not Running</></>')
+    logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".ljust(15)} | </>task: <r>{task_name} </>starting</>\n')
     return True
 
 
@@ -186,3 +183,24 @@ async def bot_enabled(chat_id: int) -> bool:
 
         await asyncio.sleep(3)
         await bot.delete_message(chat_id, disabled_msg)
+
+async def clear_chat(chat_id: int) -> None:
+    pass
+    """
+    if type(query) is types.CallbackQuery:
+        chat_id = query.message.chat.id  # get chat_id
+    else:
+        chat_id = query.chat.id
+
+    chat = await bot.get_chat(chat_id)  # get chat info
+    chat_type = chat.type  # get chat type
+
+    if chat_type == 'private':
+        status_id = await db.get_status_msg_id(chat_id)
+    for msg_id in range(status_id + 10, status_id - 10, -1):
+        await del_msg_by_id(chat_id, msg_id)
+
+        # Удаляем сообщений бота
+    await del_msg_by_db_name(chat_id, 'last_schedule_message_id')
+    await del_msg_by_db_name(chat_id, 'last_status_message_id')
+    """
