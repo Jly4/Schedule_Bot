@@ -12,13 +12,12 @@ from bot.databases.database import bot_database as db
 from bot.handlers.user_handlers import register_user_handlers
 from loguru import logger
 
+
 async def run_bot():
     register_handler(dp)  # register handlers
 
-    loguru_config()  # load loguru config
-
     await db.database_init()  # db initialising
-    logger.opt(colors=True).info('<r>Database_inited</>')
+    logger.opt(colors=True).info('<y>database inited</>')
 
     # создаем список айди в базе
     user_id_list = await db.get_user_id_list()
@@ -37,15 +36,15 @@ async def run_bot():
                 asyncio.create_task(auto_status(chat_id), name=f'{chat_id} auto_status')
 
                 if auto_send_schedule:
-                    logger.opt(colors=True).info(f'<y>chat_id: <r>{f"{chat_id}".ljust(15)} | </>auto_schedule: <r>enabled</></>')
-                    logger.opt(colors=True).info(f'<y>chat_id: <r>{f"{chat_id}".ljust(15)} | </></>')
+                    logger.opt(colors=True).info(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>auto_schedule: <r>enabled</></>')
+                    logger.opt(colors=True).info('')
                     asyncio.create_task(auto_schedule(chat_id), name=f'{chat_id} auto_schedule')
                 else:
-                    logger.opt(colors=True).info(f'<y>chat_id: <r>{f"{chat_id}".ljust(15)} | </>auto_schedule: <r>disabled</></>')
-                    logger.opt(colors=True).info(f'<y>chat_id: <r>{f"{chat_id}".ljust(15)} | </></>')
+                    logger.opt(colors=True).info(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>auto_schedule: <r>disabled</></>')
+                    logger.opt(colors=True).info('')
             else:
-                logger.opt(colors=True).info(f'<y>chat_id: <r>{f"{chat_id}".ljust(15)} | </>Bot disabled</>')
-                logger.opt(colors=True).info(f'<y>chat_id: <r>{f"{chat_id}".ljust(15)} | </></>')
+                logger.opt(colors=True).info(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>Bot disabled</>')
+                logger.opt(colors=True).info('')
 
             """ если время последней активности больше месяца назад, удаляем пользователя
             """

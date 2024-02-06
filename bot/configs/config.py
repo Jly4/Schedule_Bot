@@ -13,8 +13,10 @@ auto_schedule_delay: float = 10
 auto_status_delay: float = 10
 
 # The following parameter sets logging level:
-# ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+# ['AIOGRAM_DEBUG', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+# 'AIOGRAM_DEBUG' also print aiogram auto logs
 console_log_level: str = 'DEBUG'
+
 
 # comands list for bot_father
 """

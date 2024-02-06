@@ -12,7 +12,7 @@ from PIL import Image, ImageDraw, ImageFont
 from bot.init_bot import bot
 from bot.configs import config
 from bot.databases.database import bot_database as db
-from bot.utils.utils import del_msg_by_db_name
+from bot.utils.utils import del_msg_by_db_name, del_msg_by_id
 from loguru import logger
 
 # Подавление предупреждений BeautifulSoup
@@ -27,7 +27,7 @@ system_type = platform.system()
 
 # Функция управляющая отправкой расписания
 async def auto_schedule(chat_id: int):
-    logger.opt(colors=True).info(f'<y>chat_id: <r>{f"{chat_id}".ljust(15)} | </>auto_schedule: started</>')
+    logger.opt(colors=True).info(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>auto_schedule: started</>')
     while await db.get_db_data(chat_id, 'auto_schedule'):
         # logger.opt(colors=True).info(f'<y>chat_id: <r>{chat_id}</></>')
         await send_schedule(chat_id)  # start
@@ -90,7 +90,7 @@ async def formatted_schedule_for_day(schedule, schedule_day):
 
 # отправка расписания
 async def send_schedule(chat_id: int,  now: int = 0):
-    logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".ljust(15)} |</> now: <r>{now}, </>checking...</>')
+    logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} |</> now: <r>{now}, </>checking...</>')
     # получаем настройки пользователя
     settings = await db.get_db_data(
         chat_id, 'school_class', 'school_change', 'last_check_schedule',
@@ -100,7 +100,7 @@ async def send_schedule(chat_id: int,  now: int = 0):
 
     # сохраняем настройки в переменные
     school_class, school_change, last_check_schedule, \
-    last_print_time,last_schedule_message_id, last_print_time_hour, \
+    last_print_time, last_schedule_message_id, last_print_time_hour, \
     last_print_time_day, prev_schedule, last_printed_change_time = settings
 
     # Паттерн для поиска даты последнего изменения в датафрейме
@@ -118,7 +118,7 @@ async def send_schedule(chat_id: int,  now: int = 0):
             # Получение данных со страницы с расписанием
             schedule = pd.read_html(f"https://lyceum.tom.ru/raspsp/index.php?k={school_class}&s={school_change}", keep_default_na=True, encoding="cp1251")  # ptcp154, also work
             last_check_schedule = local_date.strftime('%d.%m.%Y %H:%M:%S')
-            logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".ljust(15)} |</> now: <r>{now}, </>parsing schedule</>')
+            logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} |</> now: <r>{now}, </>parsing schedule</>')
 
 
             break
@@ -149,7 +149,7 @@ async def send_schedule(chat_id: int,  now: int = 0):
     # Функция определяет, будет ли выполняться отправка расписания и если да, то на какой день недели
     # Функция возвращает лист, например [0, 0]. Первая цифра отвечает за то, будет ли выполняться отправка,
     # вторая за то в какой день она будет выполняться
-    def send_logic(local_date, schedule_change_time, last_print_time, last_printed_change_time, prev_schedule, last_print_time_day, last_print_time_hour, schedule_json):
+    def send_logic(local_date, schedule_change_time, last_printed_change_time, prev_schedule, last_print_time_day, last_print_time_hour, schedule_json):
         # создаем переменные для часа и дня недели
         hour = local_date.hour
         weekday = local_date.weekday()
@@ -171,27 +171,27 @@ async def send_schedule(chat_id: int,  now: int = 0):
             if weekend_condition:  # сейчас не ((суббота и больше 9) или (воскресенье и меньше 20))
                 if printed_schedule_change:  # Расписание изменилось на сегодняшний день
                     if hour < 15:
-                        logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".ljust(15)} | </>send logic condition: <r>1</></>')
+                        logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>send logic condition: <r>1</></>')
                         result = [1, 0]  # если оно изменилось, и сейчас меньше 15, то обновляем
                     else:
-                        logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".ljust(15)} | </>send logic condition: <r>2</></>')
+                        logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>send logic condition: <r>2</></>')
                         result = [1, 1]  # если сейчас больше 15, то отправляем на завтра
                 else:
-                    logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".ljust(15)} | </>send logic condition: <r>3</></>')
+                    logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>send logic condition: <r>3</></>')
                     result = [1, 1]  # если не изменилось, то отправляем на завтра
             else:
-                logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".ljust(15)} | </>send logic condition: <r>4</></>')
+                logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>send logic condition: <r>4</></>')
                 result = [0, 0]  # то не отправляем
         else:
             if print_to_tomorrow:  # если не печаталось на завтра
                 if hour > 20 and weekend_condition:  # если больше 20
-                    logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".ljust(15)} | </>send logic condition: <r>5</></>')
+                    logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>send logic condition: <r>5</></>')
                     result = [1, 1]  # то отправляем на завтра
                 else:
-                    logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".ljust(15)} | </>send logic condition: <r>6</></>')
+                    logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>send logic condition: <r>6</></>')
                     result = [0, 0]  # то не отправляем
             else:
-                logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".ljust(15)} | </>send logic condition: <r>7</></>')
+                logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>send logic condition: <r>7</></>')
                 result = [0, 0]  # то не отправляем
 
         # меняем воскресенье после 20 на понедельник
@@ -202,8 +202,8 @@ async def send_schedule(chat_id: int,  now: int = 0):
         return result
 
     # send_logic
-    send_logic_res = send_logic(local_date, schedule_change_time, last_print_time, last_printed_change_time, prev_schedule, last_print_time_day, last_print_time_hour, schedule_json)
-    logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".ljust(15)} | </>send logic res: {send_logic_res}, now: <r>{now}</></>')
+    send_logic_res = send_logic(local_date, schedule_change_time, last_printed_change_time, prev_schedule, last_print_time_day, last_print_time_hour, schedule_json)
+    logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>send logic res: {send_logic_res}, now: <r>{now}</></>')
 
     # Отправляем расписание если send_logic_res[0] == 1
     if send_logic_res[0] or now:
@@ -244,8 +244,8 @@ async def send_schedule(chat_id: int,  now: int = 0):
                         await bot.pin_chat_message(chat_id=chat_id, message_id=schedule_message.message_id)
 
                         # delete service message "bot pinned message"
-                        await bot.delete_message(chat_id, message_id=schedule_message.message_id + 1)
-                        logger.opt(colors=True).info(f'<yellow>chat_id: <r>{f"{chat_id}".ljust(15)} |</> now: <r>{now}, </>printed</>')
+                        await del_msg_by_id(chat_id, message_id=schedule_message.message_id + 1)
+                        logger.opt(colors=True).info(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} |</> now: <r>{now}, </>printed</>')
 
                     last_print_time_day = local_date.day
                     last_print_time_hour = local_date.hour

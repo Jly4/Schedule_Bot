@@ -1,6 +1,5 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-
 # основная инлайн клавиатура
 def main_keyboard() -> InlineKeyboardMarkup:
     """keyboard for edit settings
@@ -90,6 +89,9 @@ def choose_school_class_number() -> InlineKeyboardMarkup:
 def choose_school_class_letter() -> InlineKeyboardMarkup:
     """keyboard for choose class letter
     """
+    from bot.utils.utils import school_classes_dict
+
+
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton('a', callback_data='school_class_letter_callback_a'),

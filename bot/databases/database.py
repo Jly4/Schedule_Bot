@@ -46,14 +46,14 @@ class DatabaseClass:
         self.connection.commit()
 
     async def add_new_chat_id(self, chat_id: int) -> None:
-        logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".ljust(15)} | </>new chat_id</>')
+        logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>new chat_id</>')
         # создаем строку с ойди пользователя и временем создания
         self.cursor.execute('INSERT INTO user_data (chat_id) VALUES (?)', (chat_id,))
 
         self.connection.commit()  # save db
 
     async def get_db_data(self, chat_id: int, *args: str) -> Union[tuple, int]:
-        logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".ljust(15)} | </></>get_db_data: <cyan>{args}</>')
+        logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </></>get_db_data: <cyan>{args}</>')
         # получаем настройки пользователя
         self.cursor.execute(f'''
             SELECT {", ".join(args)}
@@ -65,8 +65,10 @@ class DatabaseClass:
 
         # if data is empty, user not exist in db, add user_id to db
         if not len(data_list):
-            logger.opt(colors=True).critical(f'<y>chat_id: <r>{f"{chat_id}".ljust(15)} | </>not exist in bd</>')
+            logger.opt(colors=True).critical(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>not exist in bd</>')
+            from bot.utils.status import send_status
             await self.add_new_chat_id(chat_id)
+            await send_status(chat_id, edit=1)
             return await self.get_db_data(chat_id, *args)
 
         data_tuple: tuple = data_list[0]
@@ -78,7 +80,7 @@ class DatabaseClass:
             return data_tuple[0]
 
     async def update_db_data(self, chat_id: int, **kwargs) -> None:
-        logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".ljust(15)} | </></>update_db_data: <cyan>{kwargs.keys()}</>')
+        logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </></>update_db_data: <cyan>{kwargs.keys()}</>')
 
         set_args = ", ".join(f"{key} = ?" for key in kwargs)
         values = tuple(kwargs.values())
@@ -99,7 +101,7 @@ class DatabaseClass:
         return user_id_list
 
     async def delete_chat_id(self, chat_id: int) -> None:
-        logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".ljust(15)} | </></>deleted')
+        logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </></>deleted')
 
         self.cursor.execute(f'''
         DELETE FROM user_data
