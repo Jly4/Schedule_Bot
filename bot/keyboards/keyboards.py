@@ -1,151 +1,133 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from loguru import logger
 
-# основная инлайн клавиатура
-def main_keyboard() -> InlineKeyboardMarkup:
-    """keyboard for edit settings
-    """
-    mkb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton('Получить расписание', callback_data='send_schedule_callback')
-        ],
-        [
-            InlineKeyboardButton('Настройки', callback_data='settings_callback')
-        ]
-    ])
-    return mkb
+def main() -> InlineKeyboardMarkup:
+    mkb = InlineKeyboardBuilder()
+
+    buttons: dict = {
+        'update_schedule': 'Получить расписание',
+        'settings': 'Настройки'
+    }
+
+    for callback, text in buttons.items():
+        mkb.button(text=text, callback_data=callback).adjust(2)
+
+    return mkb.as_markup()
 
 
-# инлайн клавиатура настроек
 def settings() -> InlineKeyboardMarkup:
-    """keyboard for edit settings
-    """
-    skb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton('Настроить класс', callback_data='choose_main_class_callback'),
-            InlineKeyboardButton('Автоматическое обновление', callback_data='auto_schedule_callback')
-        ],
-        [
-            InlineKeyboardButton('Закреплять расписание', callback_data='pin_schedule_callback'),
-            InlineKeyboardButton('Цвет фона расписания', callback_data='set_colour_menu_callback')
-        ],
-        [
-            InlineKeyboardButton('Отключить бота', callback_data='disable_bot_callback'),
-            InlineKeyboardButton('Информация о боте', callback_data='description_callback')
-        ],
-        [
-            InlineKeyboardButton('Закрыть настройки', callback_data='close_settings_callback')
-        ]
-    ])
-    return skb
+    skb = InlineKeyboardBuilder()
+
+    buttons = {
+        'choose_class_main': 'Настроить класс',
+        'auto_schedule': 'Автоматическое обновление',
+        'pin_schedule': 'Закреплять расписание',
+        'color_menu': 'Цвет фона расписания',
+        'disable_bot': 'Отключить бота',
+        'description': 'Информация о боте',
+        'settings': 'Закрыть настройки'
+    }
+
+    for callback, text in buttons.items():
+        skb.button(text=text, callback_data=callback).adjust(2)
+
+    return skb.as_markup()
 
 
 def choose_school_change() -> InlineKeyboardMarkup:
-    """keyboard for choose school change
-    """
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton('Первая смена', callback_data='school_change_callback_1'),
-            InlineKeyboardButton('Вторая смена', callback_data='school_change_callback_2')
+            InlineKeyboardButton(text='Первая смена', callback_data='school_change_callback_1'),
+            InlineKeyboardButton(text='Вторая смена', callback_data='school_change_callback_2')
         ],
         [
-            InlineKeyboardButton('Назад', callback_data='settings_callback')
+            InlineKeyboardButton(text='Назад', callback_data='settings_callback')
         ]
     ])
     return kb
 
 
 def choose_school_class_number() -> InlineKeyboardMarkup:
-    """keyboard for choose class number
-    """
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton('Выбрать смену', callback_data='choose_main_change_callback')
-        ],
-        [
-            InlineKeyboardButton('1', callback_data='school_class_number_callback_1'),
-            InlineKeyboardButton('2', callback_data='school_class_number_callback_2'),
-            InlineKeyboardButton('3', callback_data='school_class_number_callback_3')
-        ],
-        [
-            InlineKeyboardButton('4', callback_data='school_class_number_callback_4'),
-            InlineKeyboardButton('5', callback_data='school_class_number_callback_5'),
-            InlineKeyboardButton('6', callback_data='school_class_number_callback_6')
-        ],
-        [
-            InlineKeyboardButton('7', callback_data='school_class_number_callback_7'),
-            InlineKeyboardButton('8', callback_data='school_class_number_callback_8'),
-            InlineKeyboardButton('9', callback_data='school_class_number_callback_9')
-        ],
-        [
-            InlineKeyboardButton('10', callback_data='school_class_number_callback_10'),
-            InlineKeyboardButton('11', callback_data='school_class_number_callback_11'),
-            InlineKeyboardButton('Назад', callback_data='settings_callback'),
-        ]
-    ])
-    return kb
+    kb = InlineKeyboardBuilder()
 
+    buttons = {
+         'school_class_number_1': '1',
+         'school_class_number_2': '2',
+         'school_class_number_3': '3',
+         'school_class_number_4': '4',
+         'school_class_number_5': '5',
+         'school_class_number_6': '6',
+         'school_class_number_7': '7',
+         'school_class_number_8': '8',
+         'school_class_number_9': '9',
+         'school_class_number_10': '10',
+         'school_class_number_11': '11',
+         'settings': 'Назад'
+    }
 
-# инлайн клавиатура настроек
-def choose_school_class_letter() -> InlineKeyboardMarkup:
-    """keyboard for choose class letter
-    """
+    for callback, text in buttons.items():
+        kb.button(text=text, callback_data=callback).adjust(3)
+
+    return kb.as_markup()
+
+@logger.catch
+def choose_school_class_letter(class_number) -> InlineKeyboardMarkup:
     from bot.utils.utils import school_classes_dict
+    kb = InlineKeyboardBuilder()
+
+    buttons = {
+        'school_class_letter_a': 'а',
+        'school_class_letter_b': 'б',
+        'school_class_letter_v': 'в',
+        'school_class_letter_g': 'г',
+        'school_class_letter_d': 'д',
+        'school_class_letter_e': 'е',
+        'school_class_letter_j': 'ж',
+        'school_class_letter_z': 'з'
+    }
+
+    for callback, text in buttons.items():
+        class_existed = f'{class_number+text}' in school_classes_dict.values()
+
+        if class_existed:
+            kb.button(text=text, callback_data=callback).adjust(3)
+
+    kb.button(text='Назад', callback_data='choose_class_main').adjust(3)
+    return kb.as_markup()
 
 
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton('a', callback_data='school_class_letter_callback_a'),
-            InlineKeyboardButton('б', callback_data='school_class_letter_callback_b'),
-            InlineKeyboardButton('в', callback_data='school_class_letter_callback_v')
-        ],
-        [
-            InlineKeyboardButton('г', callback_data='school_class_letter_callback_g'),
-            InlineKeyboardButton('д', callback_data='school_class_letter_callback_d'),
-            InlineKeyboardButton('е', callback_data='school_class_letter_callback_e')
-        ],
-        [
-            InlineKeyboardButton('ж', callback_data='school_class_letter_callback_j'),
-            InlineKeyboardButton('з', callback_data='school_class_letter_callback_z'),
-            InlineKeyboardButton('Назад', callback_data='settings_callback')
-        ]
-    ])
-    return kb
-
-
-# инлайн клавиатура настроек
 def description() -> InlineKeyboardMarkup:
     """keyboard for edit settings
     """
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton('@yosqe', url="https://t.me/Yosqe"),
-            InlineKeyboardButton('Закрыть описание', callback_data='description_close_callback')
+            InlineKeyboardButton(text='@yosqe', url="https://t.me/Yosqe"),
+            InlineKeyboardButton(text='Закрыть описание', callback_data='description_close_callback')
         ]
     ])
     return kb
 
 
-# инлайн клавиатура настроек
 def choose_color() -> InlineKeyboardMarkup:
     """keyboard for edit settings
     """
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton('Цвет по умолчанию', callback_data='default_colour_callback'),
-            InlineKeyboardButton('Назад', callback_data='settings_callback')
+            InlineKeyboardButton(text='Цвет по умолчанию', callback_data='default_colour_callback'),
+            InlineKeyboardButton(text='Назад', callback_data='settings')
         ]
     ])
     return kb
 
 
-# инлайн клавиатура настроек
 def dev() -> InlineKeyboardMarkup:
     """keyboard for edit settings
     """
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton('Mmm', callback_data='close_settings_callback'),
-            InlineKeyboardButton('Назад', callback_data='close_settings_callback')
+            InlineKeyboardButton(text='Mmm', callback_data='close_settings_callback'),
+            InlineKeyboardButton(text='Назад', callback_data='close_settings')
         ]
     ])
     return kb

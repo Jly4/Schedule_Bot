@@ -32,14 +32,14 @@ def loguru_config():
                  "<lvl>{function: >20}</lvl>: <yellow>{line: <3}</yellow> - " \
                  "<bold><green>{message}</green></bold>"
 
-    # Create new logger
+    # Пересоздаем обработчик
     logger.add(sink=sys.stdout,
                colorize=True,
                backtrace=True,
                diagnose=True,
                catch=True,
                format=log_format,
-               level=config.console_log_level
+               level=log_level
                )
 
     # add custom level colors

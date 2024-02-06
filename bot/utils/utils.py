@@ -3,16 +3,18 @@ import asyncio
 from aiogram import types
 from loguru import logger
 from typing import Union
-from aiogram.utils.exceptions import MessageToDeleteNotFound, MessageIdentifierNotSpecified, MessageCantBeDeleted
+from aiogram.exceptions import TelegramNotFound, TelegramBadRequest
 
-from bot.databases.database import bot_database as db
+from bot.db.database import bot_database as db
 from bot.keyboards import keyboards as kb
 from bot.init_bot import bot
 
 
 school_classes_dict = {
-    'a1': '1а', 'b1': '1б', 'v1': '1в', 'g1': '1г', 'd1': '1д', 'e1': '1е', 'j1': '1ж', 'z1': '1з',
-    'a2': '2а', 'b2': '2б', 'v2': '2в', 'g2': '2г', 'd2': '2д', 'e2': '2е', 'j2': '2ж', 'z2': '2з',
+    'a1': '1а', 'b1': '1б', 'v1': '1в', 'g1': '1г', 'd1': '1д', 'e1': '1е',
+    'j1': '1ж', 'z1': '1з',
+    'a2': '2а', 'b2': '2б', 'v2': '2в', 'g2': '2г', 'd2': '2д', 'e2': '2е',
+    'j2': '2ж', 'z2': '2з',
     'a3': '3а', 'b3': '3б', 'v3': '3в', 'g3': '3г', 'd3': '3д', 'e3': '3е',
     'a4': '4а', 'b4': '4б', 'v4': '4в', 'g4': '4г', 'd4': '4д',
     'a5': '5а', 'b5': '5б', 'v5': '5в', 'g5': '5г',
@@ -28,14 +30,14 @@ school_classes_dict = {
 async def del_msg_by_id(chat_id: int, message_id: types.message_id, message_name: str = '') -> None:
     try:
         await bot.delete_message(chat_id, message_id)  # deleting message
-    except (MessageToDeleteNotFound, MessageIdentifierNotSpecified, MessageCantBeDeleted):
+    except TelegramBadRequest:
         logger.opt(colors=True).debug(
-            f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>error: '
-            f'<r>MessageToDeleteNotFound, </>message: <r>{message_name}</></>')
+            f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>message: '
+            f'<r>{message_name}, </>error: </><r>MessageToDeleteNotFound</>')
     except Exception as e:
         logger.opt(exception=True, colors=True).error(
-            f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>error: <r>{e}, </>'
-            f'message: <r>{message_name}</></>')
+            f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>message: '
+            f'<r>{message_name}</> error: </><r>{e}</>')
 
 
 async def del_msg_by_db_name(chat_id: int, message_id_column_name: Union[int, str]) -> None:

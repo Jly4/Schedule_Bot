@@ -2,20 +2,21 @@ import asyncio
 
 from typing import Union
 from loguru import logger
-from aiogram.utils.exceptions import BotKicked, BotBlocked, MessageNotModified, ChatNotFound, CantInitiateConversation
-from aiogram.utils.exceptions import MessageToEditNotFound
-from aiogram.types.inline_keyboard import InlineKeyboardMarkup
+from aiogram.utils.keyboard import InlineKeyboardMarkup
+from aiogram.exceptions import TelegramNotFound, TelegramBadRequest, \
+    TelegramForbiddenError
 
 from bot.init_bot import bot
 from bot.configs import config
 from bot.keyboards import keyboards as kb
-from bot.databases.database import bot_database as db
+from bot.db.database import bot_database as db
 from bot.utils.utils import del_msg_by_db_name, status_message_text, del_msg_by_id
 
 
 # Функция управляющая отправкой статуса
 async def auto_status(chat_id: int) -> None:
-    logger.opt(colors=True).info(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>auto_status: started</>')
+    logger.opt(colors=True).info(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | '
+                                 f'</>auto_status: started</>')
 
     while await db.get_db_data(chat_id, 'bot_enabled'):
         # запуск
@@ -30,9 +31,10 @@ async def send_status(
         chat_id: int,
         text: str = '',
         edit: int = 1,
-        reply_markup: Union[InlineKeyboardMarkup, None] = kb.main_keyboard()
+        reply_markup: Union[InlineKeyboardMarkup, None] = kb.main()
 ) -> None:
-    logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>edit: <r>{edit}</></>')
+    logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | '
+                                  f'</>edit: <r>{edit}</></>')
 
     if text == '':
         text = await status_message_text(chat_id)
@@ -55,22 +57,19 @@ async def send_status(
 
             logger.opt(colors=True).info(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>status successful edited </>')
 
-        except (BotKicked, BotBlocked, ChatNotFound) as e:
-            logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>Bot was kicked or blocked,'
-                                          f' deleting chat_id from bd: </><r>{e}</>')
+        except TelegramForbiddenError as e:
+            logger.opt(colors=True).debug(f'<y>chat_id: <r>'
+                                          f'{f"{chat_id}".rjust(15)} | </>Bot was kicked or blocked,'
+                                          f' deleting chat_id from bd: <r>{e}</></>')
             await db.delete_chat_id(chat_id)  # delete chat_id from db
 
-        except MessageNotModified as e:
-            logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>status not edited</>')
-
-        except MessageToEditNotFound as e:
-            logger.opt(colors=True).error(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>edit failed: </><r>{e}</>')
-            edit = 0  # resend schedule
-            clear_old_msg = True
+        except TelegramBadRequest as e:
+            logger.opt(colors=True).error(f'<y>chat_id: <r>{f"{chat_id}".ljust(15)} | </>edit failed: </><r>{e}</>')
+            # edit = 0  # resend schedule
 
         except Exception as e:
             logger.opt(colors=True, exception=True).error(
-                f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>edit failed: </><r>{e}</>')
+                f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>edit failed: <r>{e}</></>')
             edit = 0  # resend schedule
 
     if not edit:
@@ -101,7 +100,7 @@ async def send_status(
                         # logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>try delete message {id}</>')
                         await del_msg_by_id(chat_id, id, 'clear old messages')
 
-        except (BotKicked, BotBlocked, ChatNotFound, CantInitiateConversation) as e:
+        except TelegramForbiddenError as e:
             logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>Bot was kicked or blocked: '
                                           f'Deleting chat_id from bd: <r>{e}</></>'
                                           )
@@ -109,4 +108,4 @@ async def send_status(
 
         except Exception as e:
             logger.opt(colors=True, exception=True).error(
-                f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>send failed </><r>{e}</>')
+                f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>send failed <r>{e}</></>')

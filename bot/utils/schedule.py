@@ -8,10 +8,11 @@ import pandas as pd
 
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
+from aiogram.types import FSInputFile
 
 from bot.init_bot import bot
 from bot.configs import config
-from bot.databases.database import bot_database as db
+from bot.db.database import bot_database as db
 from bot.utils.utils import del_msg_by_db_name, del_msg_by_id
 from loguru import logger
 
@@ -232,23 +233,22 @@ async def send_schedule(chat_id: int,  now: int = 0):
         # видимо иногда выдает ошибку и выключает бота, по этому через while и try-except
         while True:
             try:
-                # Открываем фотографию, которую хотим отправить
-                with open('bot/data/schedule.png', 'rb') as photo_file:
-                    text = f'{await text_day_of_week(schedule_day)} - Последние изменение: [{last_printed_change_time}]\n\n' # text
+                text = f'{await text_day_of_week(schedule_day)} - Последние изменение: [{last_printed_change_time}]\n\n' # text
 
-                    # Отправляем фотографию
-                    schedule_message = await bot.send_photo(chat_id, caption=text, photo=photo_file)
+                # Отправляем фотографию
+                schedule_img = FSInputFile("bot/data/schedule.png")
+                schedule_message = await bot.send_photo(chat_id, caption=text, photo=schedule_img)
 
-                    if await db.get_db_data(chat_id, 'pin_schedule_message'):
-                        # Закрепляем сообщение
-                        await bot.pin_chat_message(chat_id=chat_id, message_id=schedule_message.message_id)
+                if await db.get_db_data(chat_id, 'pin_schedule_message'):
+                    # Закрепляем сообщение
+                    await bot.pin_chat_message(chat_id=chat_id, message_id=schedule_message.message_id)
 
-                        # delete service message "bot pinned message"
-                        await del_msg_by_id(chat_id, message_id=schedule_message.message_id + 1)
-                        logger.opt(colors=True).info(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} |</> now: <r>{now}, </>printed</>')
+                    # delete service message "bot pinned message"
+                    await del_msg_by_id(chat_id, message_id=schedule_message.message_id + 1)
+                    logger.opt(colors=True).info(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} |</> now: <r>{now}, </>printed</>')
 
-                    last_print_time_day = local_date.day
-                    last_print_time_hour = local_date.hour
+                last_print_time_day = local_date.day
+                last_print_time_hour = local_date.hour
                 break
 
             except Exception as e:
