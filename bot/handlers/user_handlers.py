@@ -316,7 +316,7 @@ async def class_number_call(callback_query: types.CallbackQuery) -> None:
         chat_id = callback_query.message.chat.id  
         logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>started</>')
 
-        prefix = 'school_class_number_'  # set prefix
+        prefix = 'class_number_'  # set callback prefix
         callback = await clear_callback(callback_query, prefix)  # clear callback from prefix
 
         if int(callback) in range(1, 12):
@@ -337,7 +337,7 @@ async def class_letter_call(callback_query: types.CallbackQuery) -> None:
         chat_id = callback_query.message.chat.id
         logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>started</>')
 
-        prefix = 'school_class_letter_callback_'  # set prefix
+        prefix = 'class_letter_'  # set callback prefix
         callback = await clear_callback(callback_query, prefix)  # clear callback from prefix
 
         if callback in ['a', 'b', 'v', 'g', 'd', 'e', 'j', 'z']:
@@ -383,8 +383,9 @@ async def class_change_call(callback_query: types.CallbackQuery) -> None:
         chat_id = callback_query.message.chat.id
         logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>started</>')
 
-        prefix = 'school_change_callback_'  # set prefix
+        prefix = 'class_change_' # set callback prefix
         callback = await clear_callback(callback_query, prefix)  # clear callback from prefix
+
 
         if callback == '1':
             await db.update_db_data(chat_id, school_change=1)
