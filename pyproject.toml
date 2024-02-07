@@ -13,10 +13,11 @@ lxml = "^4.9.3"
 html5lib = "^1.1"
 beautifulsoup4 = "^4.12.2"
 openpyxl = "^3.1.2"
-aiogram-utils = "^0.1.4"
 pillow = "^10.0.0"
 loguru = "^0.7.2"
 pyarrow = "^15.0.0"
+aiogram = "^3.3.0"
+python-dotenv = "^1.0.1"
 
 
 [build-system]

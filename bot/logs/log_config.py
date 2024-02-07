@@ -3,7 +3,8 @@ import logging
 
 from loguru import logger
 
-from bot.config import config
+from bot.config.config_loader import console_log_level, \
+    schedule_auto_send_delay, status_auto_update_delay
 
 
 class InterceptHandler(logging.Handler):
@@ -14,7 +15,7 @@ class InterceptHandler(logging.Handler):
 
 # logging config
 def loguru_config():
-    log_level = config.console_log_level
+    log_level = console_log_level
     logger.level("AIOGRAM_DEBUG", no=8)
 
     if log_level == 'AIOGRAM_DEBUG':
@@ -49,8 +50,7 @@ def loguru_config():
         "INFO": "<green>",
         "SUCCESS": "<green>",
         "WARNING": "<yellow>",
-        "ERROR": "<red>",
-        "CRITICAL": "<red>",
+        "ERROR": "<red>"
     }
 
     for level, color in level.items():
@@ -71,10 +71,10 @@ def loguru_config():
     # Start messages
     logger.opt(colors=True).info('<r>Bot started</>')
     logger.opt(colors=True).info(f'<y>log level: <r>{log_level}</></>')
-    logger.opt(colors=True).info(f'<y>auto_schedule_delay = <r>'
-                                 f'{config.auto_schedule_delay}</></>')
-    logger.opt(colors=True).info(f'<y>auto_status_delay = <r>'
-                                 f'{config.auto_status_delay}</></>')
+    logger.opt(colors=True).info(f'<y>schedule_auto_send_delay = <r>'
+                                 f'{schedule_auto_send_delay}</></>')
+    logger.opt(colors=True).info(f'<y>status_auto_update_delay = <r>'
+                                 f'{status_auto_update_delay}</></>')
 
 
 """

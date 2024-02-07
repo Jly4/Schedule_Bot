@@ -12,32 +12,26 @@ from PIL import Image, ImageDraw, ImageFont
 from aiogram.types import FSInputFile
 
 from main import bot
-from bot.config import config
 from bot.database.db import bot_database as db
 from bot.utils.utils import del_msg_by_db_name, del_msg_by_id
-
+from bot.config.config_loader import schedule_auto_send_delay
 
 # Подавление предупреждений BeautifulSoup
 warnings.filterwarnings("ignore", category=UserWarning, module="bs4")
 
-# получение текущего времени
 local_timezone = pytz.timezone('Asia/Tomsk')
-
-# получаем тип ос
 system_type = platform.system()
 
 
-# Функция управляющая отправкой расписания
-async def auto_schedule(chat_id: int):
-    logger.opt(colors=True).info(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>auto_schedule: started</>')
-    while await db.get_db_data(chat_id, 'auto_schedule'):
+async def schedule_auto_send(chat_id: int):
+    logger.opt(colors=True).info(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>schedule_auto_send: started</>')
+    while await db.get_db_data(chat_id, 'schedule_auto_send'):
         # logger.opt(colors=True).info(f'<y>chat_id: <r>{chat_id}</></>')
         await send_schedule(chat_id)  # start
 
-        await asyncio.sleep(config.auto_schedule_delay * 60)  # задержка сканирования
+        await asyncio.sleep(schedule_auto_send_delay * 60)  # задержка сканирования
 
 
-# функция для получения получение дня недели в текстовом виде
 async def text_day_of_week(schedule_day):
     day = {0: 'Понедельник', 1: 'Вторник', 2: 'Среда', 3: 'Четверг', 4: 'Пятница', 5: 'Суббота'}[schedule_day]
 
@@ -83,14 +77,13 @@ async def generate_image(chat_id, formatted_schedule):
     image.save('bot/data/schedule.png')
 
 
-# функция, которая достает и форматирует из dataframe расписание на день переданный в нее
-async def formatted_schedule_for_day(schedule, schedule_day):
+# pull schedule of day from dataframe
+async def format_schedule(schedule, schedule_day):
     # получаем номер нужного дня
     day_number = schedule[4 + schedule_day].fillna('-').iloc[:, 1:]
     return day_number
 
 
-# отправка расписания
 async def send_schedule(chat_id: int,  now: int = 0):
     logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} |</> now: <r>{now}, </>checking...</>')
     # получаем настройки пользователя
@@ -136,14 +129,14 @@ async def send_schedule(chat_id: int,  now: int = 0):
             await bot.send_message(chat_id, 'Сайт умер. Следующая попытка через 15м.', disable_notification=True)
 
             # timer
-            await asyncio.sleep(config.auto_schedule_delay * 60)
+            await asyncio.sleep(config.schedule_auto_send_delay * 60)
             continue
 
     # получаем время последнего изменения расписания
     schedule_change_time = re.search(datetime_pattern, schedule[3][0][0]).group()
 
     # получаем schedule в виде json
-    formatted_schedule = await formatted_schedule_for_day(schedule, local_date.weekday())
+    formatted_schedule = await format_schedule(schedule, local_date.weekday())
 
     # форматируем в json
     schedule_json = formatted_schedule.to_json()
@@ -222,7 +215,7 @@ async def send_schedule(chat_id: int,  now: int = 0):
         schedule_day = send_logic_res[1]
 
         # Получаем форматированную таблицу с расписанием
-        formatted_schedule = await formatted_schedule_for_day(schedule, schedule_day)
+        formatted_schedule = await format_schedule(schedule, schedule_day)
 
         # сохраняем последнее напечатанное расписание в json
         prev_schedule = formatted_schedule.to_json()

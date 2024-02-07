@@ -3,11 +3,13 @@ import asyncio
 from aiogram import types
 from loguru import logger
 from typing import Union
-from aiogram.exceptions import TelegramNotFound, TelegramBadRequest
+from aiogram.exceptions import TelegramBadRequest
 
+from main import bot
+from bot.logs.log_config import loguru_config
 from bot.database.db import bot_database as db
 from bot.keyboards import keyboards as kb
-from main import bot
+
 
 
 school_classes_dict = {
@@ -25,6 +27,30 @@ school_classes_dict = {
     'a10': '10а', 'b10': '10б',
     'a11': '11а', 'b11': '11б'
 }
+
+
+async def run_bot_tasks():
+    await db.database_init()
+    loguru_config()  # load loguru config
+
+    chat_id_list = await db.get_user_id_list()
+    logger.opt(colors=True).debug(f'<y>user_id_list: '
+                                  f'<cyan>{chat_id_list}</></>\n')
+    if chat_id_list:  # if chat_id not empty
+        for chat_id in chat_id_list:
+            # get user settings
+            bot_enabled = await db.get_db_data(chat_id, 'bot_enabled')
+            auto_send_schedule = await db.get_db_data(chat_id, 'schedule_auto_send')
+
+            if bot_enabled:
+                from bot.utils.status import status_auto_update
+                task_name = f'{chat_id} status_auto_update'
+                asyncio.create_task(status_auto_update(chat_id), name=task_name)
+
+                if auto_send_schedule:
+                    from bot.utils.schedule import schedule_auto_send
+                    task_name = f'{chat_id} schedule_auto_send'
+                    asyncio.create_task(schedule_auto_send(chat_id), name=task_name)
 
 
 async def del_msg_by_id(chat_id: int, message_id: types.message_id, message_name: str = '') -> None:
@@ -51,17 +77,17 @@ async def del_msg_by_db_name(chat_id: int, message_id_column_name: Union[int, st
 
 async def settings(chat_id: int) -> None:
     logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>started</>')
-    from main.utils.status import send_status
+    from bot.utils.status import send_status
 
     await send_status(chat_id, edit=1, reply_markup=kb.settings())
 
 
 async def status_message_text(chat_id: int) -> str:
-    settings = await db.get_db_data(chat_id, 'pin_schedule_message', 'auto_schedule', 'school_class', 'school_change',
+    settings = await db.get_db_data(chat_id, 'pin_schedule_message', 'schedule_auto_send', 'school_class', 'school_change',
                                     'last_printed_change_time', 'last_check_schedule', 'last_status_message_id')
 
     # save settings into variables
-    pin_schedule_message, auto_schedule, school_class, school_change, \
+    pin_schedule_message, schedule_auto_send, school_class, school_change, \
     last_printed_change_time, last_check_schedule, last_status_message_id = settings
 
     formatted_class = await format_school_class(school_class)
@@ -72,7 +98,7 @@ async def status_message_text(chat_id: int) -> str:
 🎓 Класс: {formatted_class}
 📚 Смена: {['первая', 'вторая'][school_change - 1]}
 📌 Закреплять расписание: {['Нет', 'Да'][pin_schedule_message]}\n
-⏳ Автоматическая проверка расписания:\n{['🔴 Выключена', "🟢 Включена, проверка выполняется раз в 10 минут"][auto_schedule]}\n\n
+⏳ Автоматическая проверка расписания:\n{['🔴 Выключена', "🟢 Включена, проверка выполняется раз в 10 минут"][schedule_auto_send]}\n\n
 """
     return status_message
 
@@ -119,7 +145,7 @@ async def disable_bot(query: Union[types.CallbackQuery, types.Message]) -> None:
     await del_msg_by_db_name(chat_id, 'last_status_message_id')
 
     await db.update_db_data(chat_id,
-                            auto_schedule=0,
+                            schedule_auto_send=0,
                             bot_enabled=0,
                             last_status_message_id=0)
 
@@ -130,7 +156,7 @@ async def start_command(chat_id: int) -> None:
     if chat_id not in user_id_list:  # check chat_id in db
         await db.add_new_chat_id(chat_id)  # add chat_id to db
 
-    await db.update_db_data(chat_id, auto_schedule=0, bot_enabled=1)
+    await db.update_db_data(chat_id, schedule_auto_send=0, bot_enabled=1)
 
     await del_msg_by_db_name(chat_id, 'last_status_message_id')
     await del_msg_by_db_name(chat_id, 'last_disable_message_id')

@@ -6,11 +6,12 @@ from typing import Union
 from aiogram import Router, F, types
 from aiogram.filters import CommandStart
 
-from main import bot, dev_id
+from main import bot
+from bot.config.config_loader import dev_id
 from bot.keyboards import keyboards as kb
-from bot.utils.status import auto_status, send_status
 from bot.database.db import bot_database as db
-from bot.utils.schedule import auto_schedule, send_schedule
+from bot.utils.status import send_status, status_auto_update
+from bot.utils.schedule import send_schedule, schedule_auto_send
 from bot.utils.utils import settings, del_msg_by_id, status_message_text
 from bot.utils.utils import disable_bot, existing_school_class, format_school_class, start_command, get_admins_id_list
 from bot.utils.utils import task_not_running, bot_enabled
@@ -27,22 +28,23 @@ async def any_callback(callback_query: types.CallbackQuery):
 
 
 @router.message(CommandStart())
-async def start_command_handler(message: types.Message) -> None:
+async def start_command(message: types.Message) -> None:
     chat_id: int = message.chat.id  # save chat_id
     logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{message.chat.id}".rjust(15)} | </>get /start</>')
 
     await start_command(chat_id)  # start_command func
     await send_status(chat_id, edit=0)  # update status
 
-    if await task_not_running(chat_id, f'{chat_id} auto_status'):  #
-        asyncio.create_task(auto_status(chat_id), name=f'{chat_id} auto_status')
+    if await task_not_running(chat_id, f'{chat_id} status_auto_update'):  #
+        asyncio.create_task(status_auto_update(chat_id), name=f'{chat_id} status_auto_update')
 
     await asyncio.sleep(1)
     await del_msg_by_id(chat_id, message.message_id, 'start command')  # delete start command
 
 
-@router.message(F.text.lower() == '/status', F.collback_data == 'status')
-async def status_handler(message: types.Message) -> None:
+@router.message(F.text.lower() == '/status')
+async def status_command(message: types.Message) -> None:
+    logger.critical('aboba')
     chat_id: int = message.chat.id  # save chat_id
     logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{message.chat.id}".rjust(15)} | </>get /status</>')
 
@@ -65,7 +67,7 @@ async def disable_bot_command(message: types.Message) -> None:
 
 
 @router.message(F.text.lower() == '/dev')
-async def dev_command_handler(message: types.Message) -> None:
+async def dev_command(message: types.Message) -> None:
     chat_id = message.chat.id  # save chat_id
     user_id: int = message.from_user.id
     logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>get /dev command</>')
@@ -97,8 +99,20 @@ async def dev_command_handler(message: types.Message) -> None:
 """
 
 
+@router.callback_query(F.data == 'status')
+async def status_call(callback_query: types.CallbackQuery) -> None:
+    chat_id = callback_query.message.chat.id
+    logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>starting</>')
+
+    await send_status(chat_id)
+
+
+""" colour handlers
+"""
+
+
 @router.callback_query(F.data == 'color_menu')
-async def set_color_menu_handler(callback_query: types.CallbackQuery) -> None:
+async def color_set_menu_call(callback_query: types.CallbackQuery) -> None:
     chat_id = callback_query.message.chat.id
     logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>starting</>')
     if await user_admin(callback_query):
@@ -122,7 +136,7 @@ async def set_color_menu_handler(callback_query: types.CallbackQuery) -> None:
 
 
 @router.message(F.text.lower().startswith('set color '))
-async def set_color_handler(message: types.Message) -> None:
+async def set_color_command(message: types.Message) -> None:
     chat_id = message.chat.id  # get chat_id
     logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | '
                                   f'</>starting</>')
@@ -147,8 +161,8 @@ async def set_color_handler(message: types.Message) -> None:
         await bot.delete_message(chat_id, set_color_message.message_id)  # delete color message
 
 
-@router.callback_query(F.data == ('default_colour'))
-async def default_color(callback_query: types.CallbackQuery) -> None:
+@router.callback_query(F.data == 'default_colour')
+async def default_color_call(callback_query: types.CallbackQuery) -> None:
     chat_id = callback_query.message.chat.id
     logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>starting</>')
 
@@ -177,7 +191,7 @@ async def default_color(callback_query: types.CallbackQuery) -> None:
 
 
 @router.callback_query(F.data == 'settings')
-async def settings_handler(callback_query: types.CallbackQuery) -> None:
+async def settings_call(callback_query: types.CallbackQuery) -> None:
     chat_id = callback_query.message.chat.id
     logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>started</>')
     if await user_admin(callback_query):
@@ -188,7 +202,7 @@ async def settings_handler(callback_query: types.CallbackQuery) -> None:
 
 
 @router.callback_query(F.data == 'update_schedule')
-async def update_schedule(callback_query: types.CallbackQuery) -> None:
+async def update_schedule_call(callback_query: types.CallbackQuery) -> None:
     chat_id = callback_query.message.chat.id  
     logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>started</>')
     await callback_completion(callback_query)  # complete callback
@@ -198,24 +212,25 @@ async def update_schedule(callback_query: types.CallbackQuery) -> None:
     await send_status(chat_id)
 
 
-async def auto_schedule_handler(callback_query: types.CallbackQuery) -> None:
+@router.callback_query(F.data == 'schedule_auto_send')
+async def turn_schedule_auto_send_call(callback_query: types.CallbackQuery) -> None:
     chat_id = callback_query.message.chat.id
 
     if await user_admin(callback_query):
-        if await db.get_db_data(chat_id, 'auto_schedule'):
+        if await db.get_db_data(chat_id, 'schedule_auto_send'):
 
-            await db.update_db_data(chat_id, auto_schedule=0)  # turn off schedule auto check
+            await db.update_db_data(chat_id, schedule_auto_send=0)  # turn off schedule auto check
 
             # message for user
-            auto_schedule_status_message = await bot.send_message(chat_id,
+            schedule_auto_send_status_message = await bot.send_message(chat_id,
                                                                   'Автоматическое получение расписания '
                                                                   'при изменении, выключено'
                                                                   )
         else:
-            await db.update_db_data(chat_id, auto_schedule=1)  # turn on schedule auto check
+            await db.update_db_data(chat_id, schedule_auto_send=1)  # turn on schedule auto check
 
             # message for user
-            auto_schedule_status_message = await bot.send_message(chat_id,
+            schedule_auto_send_status_message = await bot.send_message(chat_id,
                                                                   'Автоматическое получение расписания '
                                                                   'при изменении, включено'
                                                                   )
@@ -224,15 +239,16 @@ async def auto_schedule_handler(callback_query: types.CallbackQuery) -> None:
         await asyncio.sleep(2)  # timer
 
         # удаление сообщения о переключении
-        await del_msg_by_id(chat_id, auto_schedule_status_message.message_id, 'auto_schedule_status_message')
+        await del_msg_by_id(chat_id, schedule_auto_send_status_message.message_id, 'schedule_auto_send_status_message')
 
         # запуск
-        if await db.get_db_data(chat_id, 'auto_schedule'):
-            if await task_not_running(chat_id, f'{chat_id} auto_schedule'):
-                asyncio.create_task(auto_schedule(chat_id), name=f'{chat_id} auto_schedule')
+        if await db.get_db_data(chat_id, 'schedule_auto_send'):
+            if await task_not_running(chat_id, f'{chat_id} schedule_auto_send'):
+                asyncio.create_task(schedule_auto_send(chat_id), name=f'{chat_id} schedule_auto_send')
 
 
-async def pin_schedule_handler(callback_query: types.CallbackQuery) -> None:
+@router.callback_query(F.data == 'pin_schedule')
+async def turn_pin_schedule_call(callback_query: types.CallbackQuery) -> None:
     chat_id = callback_query.message.chat.id  
     logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>started</>')
 
@@ -262,100 +278,39 @@ async def pin_schedule_handler(callback_query: types.CallbackQuery) -> None:
         await callback_completion(callback_query)
 
 
-""" disable bot handler
-"""
-
-
-async def disable_bot_callback(callback_query: types.CallbackQuery) -> None:
+@router.callback_query(F.data == 'disable_bot')
+async def disable_bot_call(callback_query: types.CallbackQuery) -> None:
     if await user_admin(callback_query):
         await disable_bot(callback_query)  # start disable bot func
 
 
-""" description handlers
-"""
-
-
-async def description_open(callback_query: types.CallbackQuery) -> None:
+@router.callback_query(F.data == 'description')
+async def description_call(callback_query: types.CallbackQuery) -> None:
     chat_id = callback_query.message.chat.id  
     logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>started</>')
 
-    # получаем настройки пользователя
-    status_message_id = await db.get_status_msg_id(chat_id)
-
-    # переменная с отправленным сообщением
-    description_text = 'Незамеченное летающее масло\n\nВопросы и предложения по кнопке ниже:'
-    # редактируем сообщение
-    await bot.edit_message_text(chat_id=chat_id, text=description_text, message_id=status_message_id,
-                                reply_markup=kb.description())
-
-
-async def description_close(callback_query: types.CallbackQuery) -> None:
-    chat_id = callback_query.message.chat.id  
-    logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>started</>')
-
-    # получаем настройки пользователя
-    status_message_id = await db.get_status_msg_id(chat_id)
-
-    #
-    status_text = await status_message_text(chat_id)
-
-    # редактируем сообщение
-    await bot.edit_message_text(chat_id=chat_id, text=status_text, message_id=status_message_id,
-                                reply_markup=kb.settings())
+    description_text = 'Вопросы и предложения по кнопке ниже:'
+    send_status(chat_id, text=description_text, reply_markup=kb.description())
 
 
 """ set class number, letter, and change handlers
 """
-
-
-async def change_main_handler(callback_query: types.CallbackQuery) -> None:
-    chat_id = callback_query.message.chat.id
-    logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>started</>')
-
-    if await user_admin(callback_query):
-        text = 'Выберите смену'
-        await send_status(chat_id, text=text, reply_markup=kb.choose_school_change())
-
-
-async def class_change_handler(callback_query: types.CallbackQuery) -> None:
-    if await user_admin(callback_query):
-        chat_id = callback_query.message.chat.id
-        logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>started</>')
-
-        prefix = 'school_change_callback_'  # set prefix
-        callback = await clear_callback(callback_query, prefix)  # clear callback from prefix
-
-        if callback == '1':
-            await db.update_db_data(chat_id, school_change=1)
-            await send_status(chat_id, text='Установлена первая смена', reply_markup=None)
-
-        elif callback == '2':
-            await db.update_db_data(chat_id, school_change=2)
-            await send_status(chat_id, text='Установлена вторая смена', reply_markup=None)
-
-        else:
-            await class_main_handler(callback_query)
-
-        await asyncio.sleep(2)
-        await send_status(chat_id)
-
-
 # variable to help set class
 school_class: str = ''
 
 
-@router.callback_query(F.data == 'choose_class_main')
-async def class_main_handler(callback_query: types.CallbackQuery) -> None:
+@router.callback_query(F.data == 'choose_class')
+async def choose_class_call(callback_query: types.CallbackQuery) -> None:
     if await user_admin(callback_query):
         chat_id = callback_query.message.chat.id
         logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>started</>')
 
         text = 'Выберите цифру класса'
         await send_status(chat_id=chat_id, text=text, 
-                          reply_markup=kb.choose_school_class_number())
+                          reply_markup=kb.choose_class_number())
 
-
-async def class_number_handler(callback_query: types.CallbackQuery) -> None:
+@router.callback_query(F.data.startswith('class_number_'))
+async def class_number_call(callback_query: types.CallbackQuery) -> None:
     if await user_admin(callback_query):
         global school_class
         chat_id = callback_query.message.chat.id  
@@ -368,14 +323,15 @@ async def class_number_handler(callback_query: types.CallbackQuery) -> None:
             school_class = callback
             text = 'Выберите цифру класса'
             await send_status(chat_id=chat_id, text=text,
-                              reply_markup=kb.choose_school_class_letter(school_class)
+                              reply_markup=kb.choose_class_letter(school_class)
                               )
         else:
             # Возвращаемся
             await settings(chat_id)
 
 
-async def class_letter_handler(callback_query: types.CallbackQuery) -> None:
+@router.callback_query(F.data.startswith('class_letter_'))
+async def class_letter_call(callback_query: types.CallbackQuery) -> None:
     if await user_admin(callback_query):
         global school_class
         chat_id = callback_query.message.chat.id
@@ -409,6 +365,41 @@ async def class_letter_handler(callback_query: types.CallbackQuery) -> None:
         else:
             # Возвращаемся
             await settings(chat_id)
+
+
+@router.callback_query(F.data == 'choose_change')
+async def choose_change_call(callback_query: types.CallbackQuery) -> None:
+    chat_id = callback_query.message.chat.id
+    logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>started</>')
+
+    if await user_admin(callback_query):
+        text = 'Выберите смену'
+        await send_status(chat_id, text=text, reply_markup=kb.choose_change())
+
+
+@router.callback_query(F.data.startswith('class_change_'))
+async def class_change_call(callback_query: types.CallbackQuery) -> None:
+    if await user_admin(callback_query):
+        chat_id = callback_query.message.chat.id
+        logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>started</>')
+
+        prefix = 'school_change_callback_'  # set prefix
+        callback = await clear_callback(callback_query, prefix)  # clear callback from prefix
+
+        if callback == '1':
+            await db.update_db_data(chat_id, school_change=1)
+            await send_status(chat_id, text='Установлена первая смена', reply_markup=None)
+
+        elif callback == '2':
+            await db.update_db_data(chat_id, school_change=2)
+            await send_status(chat_id, text='Установлена вторая смена', reply_markup=None)
+
+        else:
+            await choose_class_call(callback_query)
+
+        await asyncio.sleep(2)
+        await send_status(chat_id)
+
 
 
 """ applied functions

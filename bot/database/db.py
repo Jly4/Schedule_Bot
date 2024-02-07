@@ -16,8 +16,8 @@ class DatabaseClass:
         CREATE TABLE IF NOT EXISTS user_data (
         count INTEGER PRIMARY KEY,
         chat_id INTEGER NOT NULL,
-        auto_schedule INTEGER DEFAULT 0 NOT NULL,
-        auto_status INTEGER DEFAULT 1 NOT NULL,
+        schedule_auto_send INTEGER DEFAULT 0 NOT NULL,
+        bot_enabled INTEGER DEFAULT 1 NOT NULL,
         school_class TEXT DEFAULT 'b11',
         school_change INTEGER DEFAULT 1,
         pin_schedule_message INTEGER DEFAULT 1,
@@ -66,7 +66,7 @@ class DatabaseClass:
         # if data is empty, user not exist in db, add user_id to db
         if not len(data_list):
             logger.opt(colors=True).critical(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>not exist in bd</>')
-            from main.utils.status import send_status
+            from bot.utils.status import send_status
             await self.add_new_chat_id(chat_id)
             await send_status(chat_id, edit=1)
             return await self.get_db_data(chat_id, *args)

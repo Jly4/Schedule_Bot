@@ -1,11 +1,10 @@
 import asyncio
 
-from loguru import logger
 from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
 
-from bot.logs.log_config import loguru_config
-from bot.config.config_loader import token, dev_id
+from bot.config.config_loader import token
+
 
 bot = Bot(token=token, parse_mode=ParseMode.HTML)
 dp = Dispatcher()
@@ -13,9 +12,10 @@ dp = Dispatcher()
 
 async def start():
     try:
+        from bot.utils.utils import run_bot_tasks
+        await run_bot_tasks()
         # loop = asyncio.get_event_loop()
         # loop.create_task(run_bot())
-        loguru_config()  # load loguru config
 
         from bot.handlers.user_handlers import router
         dp.include_router(router)
@@ -23,21 +23,14 @@ async def start():
         await bot.delete_webhook(drop_pending_updates=True)
         await dp.start_polling(bot)
 
-    except Exception as e:
-        logger.opt(colors=True, exception=True).critical(f'<r>Dead: {e}</>')
-
-        text = f'Бот завершил работу из-за ошибки: {str(e)}'
-        asyncio.run(bot.send_message(dev_id, text=text))
-
+    finally:
+        await bot.session.close()
 
 if __name__ == '__main__':
     asyncio.run(start())
 
 
-
-
-
-#     dp.register_callback_query_handler(auto_schedule_handler, text='auto_schedule_callback')
+#     dp.register_callback_query_handler(schedule_auto_send_handler, text='schedule_auto_send_callback')
 #     dp.register_callback_query_handler(pin_schedule_handler, text='pin_schedule_callback')
 #     dp.register_callback_query_handler(disable_bot_callback_handler, text='disable_bot_callback')
 #     dp.register_callback_query_handler(description_open_handler, text='description_callback')
