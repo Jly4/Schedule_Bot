@@ -37,9 +37,6 @@ def settings() -> InlineKeyboardMarkup:
 
 
 def choose_class_number() -> InlineKeyboardMarkup:
-    skb = InlineKeyboardBuilder()
-    skb.button(text='Выбрать смену', callback_data='choose_change')
-
     kb = InlineKeyboardBuilder()
     buttons = {
         'class_number_1': '1',
@@ -58,21 +55,7 @@ def choose_class_number() -> InlineKeyboardMarkup:
     for callback, text in buttons.items():
         kb.button(text=text, callback_data=callback).adjust(3)
 
-    skb.attach(kb)
-    return skb.as_markup()
-
-
-def choose_change() -> InlineKeyboardMarkup:
-    kb = InlineKeyboardBuilder()
-    change_dict = {
-        'class_change_1': 'Первая',
-        'class_change_2': 'Вторая'
-    }
-
-    for change, text in change_dict.items():
-        kb.button(text=text, callback_data=change)
-
-    return kb.as_markup(resize_keyboard=False)
+    return kb.as_markup()
 
 
 @logger.catch
@@ -97,34 +80,33 @@ def choose_class_letter(class_number) -> InlineKeyboardMarkup:
         if class_existed:
             kb.button(text=text, callback_data=callback).adjust(3)
 
-    kb.button(text='Назад', callback_data='choose_class_main').adjust(3)
+    kb.button(text='Назад', callback_data='choose_class').adjust(3)
     return kb.as_markup()
 
 
 def description() -> InlineKeyboardMarkup:
-    """keyboard for edit settings
-    """
+
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text='@yosqe', url="https://t.me/Yosqe"),
-            InlineKeyboardButton(text='Закрыть описание',
-                                 callback_data='settings')
+            InlineKeyboardButton(text='Назад', callback_data='settings')
         ]
     ])
     return kb
 
 
 def choose_color() -> InlineKeyboardMarkup:
-    """keyboard for edit settings
-    """
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text='Цвет по умолчанию',
-                                 callback_data='default_colour'),
-            InlineKeyboardButton(text='Назад', callback_data='settings')
-        ]
-    ])
-    return kb
+    kb = InlineKeyboardBuilder()
+
+    buttons = {
+        'default_colour': 'Цвет по умолчанию',
+        'settings': 'Назад'
+    }
+
+    for callback, text in buttons.items():
+        kb.button(text=text, callback_data=callback).adjust(2)
+
+    return kb.as_markup()
 
 
 def dev() -> InlineKeyboardMarkup:
@@ -132,9 +114,8 @@ def dev() -> InlineKeyboardMarkup:
     """
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text='Mmm',
-                                 callback_data='close_settings_callback'),
-            InlineKeyboardButton(text='Назад', callback_data='close_settings')
+            InlineKeyboardButton(text='...', callback_data='status'),
+            InlineKeyboardButton(text='Назад', callback_data='status')
         ]
     ])
     return kb

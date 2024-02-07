@@ -70,7 +70,7 @@ async def del_msg_by_db_name(chat_id: int, message_id_column_name: Union[int, st
     logger.opt(colors=True).debug(
         f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>message: <r>{message_id_column_name}</></>')
 
-    message_id: int = await db.get_db_data(chat_id, message_id_column_name)  # get msg id
+    message_id: int = await db.get_db_data(chat_id, message_id_column_name)
 
     await del_msg_by_id(chat_id, message_id, message_id_column_name)
 
