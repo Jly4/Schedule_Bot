@@ -6,10 +6,10 @@ from aiogram.utils.keyboard import InlineKeyboardMarkup
 from aiogram.exceptions import TelegramNotFound, TelegramBadRequest, \
     TelegramForbiddenError
 
-from bot.init_bot import bot
-from bot.configs import config
+from main import bot
+from bot.config import config
 from bot.keyboards import keyboards as kb
-from bot.db.database import bot_database as db
+from bot.database.db import bot_database as db
 from bot.utils.utils import del_msg_by_db_name, status_message_text, del_msg_by_id
 
 
@@ -64,8 +64,12 @@ async def send_status(
             await db.delete_chat_id(chat_id)  # delete chat_id from db
 
         except TelegramBadRequest as e:
-            logger.opt(colors=True).error(f'<y>chat_id: <r>{f"{chat_id}".ljust(15)} | </>edit failed: </><r>{e}</>')
-            # edit = 0  # resend schedule
+            if "message is not modified" in str(e):
+                logger.opt(colors=True).error(f'<y>chat_id: <r>{f"{chat_id}".ljust(15)} | </>edit failed: </><r>{e}</>')
+
+            else:
+                logger.opt(colors=True).error(f'<y>chat_id: <r>{f"{chat_id}".ljust(15)} | </>edit failed: </><r>{e}</>')
+                edit = 0  # resend schedule
 
         except Exception as e:
             logger.opt(colors=True, exception=True).error(

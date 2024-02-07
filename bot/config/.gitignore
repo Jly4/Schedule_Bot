@@ -1,6 +1,6 @@
 .idea/
-temp/
 bot/logs/*.log
 bot/logs/*.zip
-bot/configs/tconfig.py
 *.db
+.env
+

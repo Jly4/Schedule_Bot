@@ -6,11 +6,10 @@ from typing import Union
 from aiogram import Router, F, types
 from aiogram.filters import CommandStart
 
-from bot.init_bot import bot
-from bot.configs.config import dev_id
+from main import bot, dev_id
 from bot.keyboards import keyboards as kb
 from bot.utils.status import auto_status, send_status
-from bot.db.database import bot_database as db
+from bot.database.db import bot_database as db
 from bot.utils.schedule import auto_schedule, send_schedule
 from bot.utils.utils import settings, del_msg_by_id, status_message_text
 from bot.utils.utils import disable_bot, existing_school_class, format_school_class, start_command, get_admins_id_list
@@ -21,6 +20,10 @@ router = Router()
 
 """ bot commands handlers
 """
+
+@router.callback_query(F.data == '')
+async def any_callback(callback_query: types.CallbackQuery):
+    logger.critical(callback_query.data)
 
 
 @router.message(CommandStart())
@@ -144,13 +147,14 @@ async def set_color_handler(message: types.Message) -> None:
         await bot.delete_message(chat_id, set_color_message.message_id)  # delete color message
 
 
-@router.callback_query(F.data.statswith('set color '))
-async def default_color_handler(callback_query: types.CallbackQuery) -> None:
+@router.callback_query(F.data == ('default_colour'))
+async def default_color(callback_query: types.CallbackQuery) -> None:
     chat_id = callback_query.message.chat.id
     logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>starting</>')
 
     if await user_admin(callback_query):
-        await db.update_db_data(chat_id, schedule_bg_color="255,255,143")  # set default color
+        # set default color
+        await db.update_db_data(chat_id, schedule_bg_color="255,255,143")
 
         # получаем id основного сообщения
         status_message_id = await db.get_status_msg_id(chat_id)
@@ -178,15 +182,6 @@ async def settings_handler(callback_query: types.CallbackQuery) -> None:
     logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>started</>')
     if await user_admin(callback_query):
         await settings(chat_id)
-
-
-async def close_settings(callback_query: types.CallbackQuery) -> None:
-    chat_id = callback_query.message.chat.id
-    logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>started</>')
-
-    if await user_admin(callback_query):
-        await send_status(chat_id)
-
 
 """ schedule handlers
 """

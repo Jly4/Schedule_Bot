@@ -3,7 +3,7 @@ import logging
 
 from loguru import logger
 
-from bot.configs import config
+from bot.config import config
 
 
 class InterceptHandler(logging.Handler):
@@ -54,15 +54,15 @@ def loguru_config():
     }
 
     for level, color in level.items():
-        logger.critical(f'<y>log level: <r>{level}</></>, <y>color: <r>{color}</></>')
         logger.level(level, color=color)
 
     # Log to file
     logger.add('bot/logs/bot.log',
                format=log_format,
                level='DEBUG',
-               rotation='10 MB',
+               rotation='100 MB',
                compression='zip',
+               retention="30 days",
                enqueue=True,
                backtrace=True,
                diagnose=True,

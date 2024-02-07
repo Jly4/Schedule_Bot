@@ -5,9 +5,9 @@ from loguru import logger
 from typing import Union
 from aiogram.exceptions import TelegramNotFound, TelegramBadRequest
 
-from bot.db.database import bot_database as db
+from bot.database.db import bot_database as db
 from bot.keyboards import keyboards as kb
-from bot.init_bot import bot
+from main import bot
 
 
 school_classes_dict = {
@@ -51,7 +51,7 @@ async def del_msg_by_db_name(chat_id: int, message_id_column_name: Union[int, st
 
 async def settings(chat_id: int) -> None:
     logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>started</>')
-    from bot.utils.status import send_status
+    from main.utils.status import send_status
 
     await send_status(chat_id, edit=1, reply_markup=kb.settings())
 

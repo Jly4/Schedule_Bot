@@ -66,7 +66,7 @@ class DatabaseClass:
         # if data is empty, user not exist in db, add user_id to db
         if not len(data_list):
             logger.opt(colors=True).critical(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>not exist in bd</>')
-            from bot.utils.status import send_status
+            from main.utils.status import send_status
             await self.add_new_chat_id(chat_id)
             await send_status(chat_id, edit=1)
             return await self.get_db_data(chat_id, *args)
@@ -117,4 +117,4 @@ class DatabaseClass:
 
 
 # присваиваем
-bot_database = DatabaseClass('bot/bot_data.db')
+bot_database = DatabaseClass('bot/database/bot_data.db')

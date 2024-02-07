@@ -73,7 +73,7 @@ def choose_school_class_number() -> InlineKeyboardMarkup:
 
 @logger.catch
 def choose_school_class_letter(class_number) -> InlineKeyboardMarkup:
-    from bot.utils.utils import school_classes_dict
+    from main.utils.utils import school_classes_dict
     kb = InlineKeyboardBuilder()
 
     buttons = {
@@ -114,7 +114,7 @@ def choose_color() -> InlineKeyboardMarkup:
     """
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text='Цвет по умолчанию', callback_data='default_colour_callback'),
+            InlineKeyboardButton(text='Цвет по умолчанию', callback_data='default_colour'),
             InlineKeyboardButton(text='Назад', callback_data='settings')
         ]
     ])

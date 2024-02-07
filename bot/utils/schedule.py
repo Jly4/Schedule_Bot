@@ -6,15 +6,16 @@ import traceback
 import platform
 import pandas as pd
 
+from loguru import logger
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 from aiogram.types import FSInputFile
 
-from bot.init_bot import bot
-from bot.configs import config
-from bot.db.database import bot_database as db
+from main import bot
+from bot.config import config
+from bot.database.db import bot_database as db
 from bot.utils.utils import del_msg_by_db_name, del_msg_by_id
-from loguru import logger
+
 
 # Подавление предупреждений BeautifulSoup
 warnings.filterwarnings("ignore", category=UserWarning, module="bs4")
