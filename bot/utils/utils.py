@@ -6,13 +6,13 @@ from typing import Union
 from aiogram.exceptions import TelegramBadRequest
 
 from main import bot
+from bot.logs.log_config import custom_logger
 from bot.logs.log_config import loguru_config
 from bot.database.db import bot_database as db
 from bot.keyboards import keyboards as kb
 
 
-
-school_classes_dict = {
+classes_dict = {
     'a1': '1а', 'b1': '1б', 'v1': '1в', 'g1': '1г', 'd1': '1д', 'e1': '1е',
     'j1': '1ж', 'z1': '1з',
     'a2': '2а', 'b2': '2б', 'v2': '2в', 'g2': '2г', 'd2': '2д', 'e2': '2е',
@@ -83,12 +83,16 @@ async def settings(chat_id: int) -> None:
 
 
 async def status_message_text(chat_id: int) -> str:
-    settings = await db.get_db_data(chat_id, 'pin_schedule_message', 'schedule_auto_send', 'school_class', 'school_change',
-                                    'last_printed_change_time', 'last_check_schedule', 'last_status_message_id')
+    settings = await db.get_db_data(chat_id,
+                                    'pin_schedule_message',
+                                    'schedule_auto_send',
+                                    'school_class',
+                                    'last_printed_change_time',
+                                    'last_check_schedule')
 
     # save settings into variables
-    pin_schedule_message, schedule_auto_send, school_class, school_change, \
-    last_printed_change_time, last_check_schedule, last_status_message_id = settings
+    pin_schedule_message, schedule_auto_send, school_class, \
+    last_printed_change_time, last_check_schedule = settings
 
     formatted_class = await format_school_class(school_class)
 
@@ -96,34 +100,20 @@ async def status_message_text(chat_id: int) -> str:
 🔍 Последняя проверка расписания: {last_check_schedule}
 📅 Последнее изменение расписания: {last_printed_change_time}\n
 🎓 Класс: {formatted_class}
-📚 Смена: {['первая', 'вторая'][school_change - 1]}
 📌 Закреплять расписание: {['Нет', 'Да'][pin_schedule_message]}\n
-⏳ Автоматическая проверка расписания:\n{['🔴 Выключена', "🟢 Включена, проверка выполняется раз в 10 минут"][schedule_auto_send]}\n\n
+⏳ Автоматическая проверка расписания:
+{['🔴 Выключена', "🟢 Включена, проверка выполняется раз в 10 минут"][schedule_auto_send]}
 """
     return status_message
 
 
-# format school class
 async def format_school_class(school_class) -> str:
     """return school class name to status message
 
     :param school_class:
     :return:
     """
-    return school_classes_dict[school_class]
-
-
-# format school class
-async def existing_school_class(school_class) -> bool:
-    """if class from callback existing in classes dict, return true
-
-    :param school_class: 
-    :return:
-    """
-    if school_class in school_classes_dict.keys():
-        return True
-    else:
-        return False
+    return classes_dict[school_class]
 
 
 async def disable_bot(query: Union[types.CallbackQuery, types.Message]) -> None:
@@ -133,7 +123,7 @@ async def disable_bot(query: Union[types.CallbackQuery, types.Message]) -> None:
         chat_id = query.chat.id
 
     chat = await bot.get_chat(chat_id)  # get chat info
-    chat_type = chat.type  # get chat type
+    chat_type = chat.type
 
     if chat_type == 'private':
         status_id = await db.get_status_msg_id(chat_id)
@@ -180,17 +170,26 @@ async def get_admins_id_list(chat_id: int) -> list:
         return admins_list
 
 
-async def task_not_running(chat_id: int, task_name: str) -> bool:
+async def run_task_if_disabled(chat_id: int, task_name: str) -> None:
     all_tasks = asyncio.all_tasks()
+    task_name_with_id = f'{chat_id}_{task_name}'
 
     for task in all_tasks:
-        if task.get_name() == task_name and not task.done():
-            logger.opt(colors=True).debug(
-                f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>task: <r>{task_name} </>already started</>')
-            return False
+        if task.get_name() == task_name_with_id and not task.done():
+            custom_logger.debug(chat_id, f'task: <r>{task_name} </>running</>')
+            return
 
-    logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>task: <r>{task_name} </>starting</>')
-    return True
+    custom_logger.debug(chat_id, f'task: <r>{task_name} </>starting</>')
+    if task_name == 'schedule_auto_send':
+        from bot.utils.schedule import schedule_auto_send
+        asyncio.create_task(schedule_auto_send(chat_id), name=task_name_with_id)
+
+    elif task_name == 'status_auto_update':
+        from bot.utils.status import status_auto_update
+        asyncio.create_task(status_auto_update(chat_id), name=task_name_with_id)
+
+    else:
+        custom_logger.error(chat_id, f'<y>Wrong task: <r>{task_name}</></>')
 
 
 async def bot_enabled(chat_id: int) -> bool:

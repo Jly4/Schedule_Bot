@@ -32,71 +32,19 @@ async def schedule_auto_send(chat_id: int):
         await asyncio.sleep(schedule_auto_send_delay * 60)  # задержка сканирования
 
 
-async def text_day_of_week(schedule_day):
-    day = {0: 'Понедельник', 1: 'Вторник', 2: 'Среда', 3: 'Четверг', 4: 'Пятница', 5: 'Суббота'}[schedule_day]
-
-    return day
-
-
-# генерация изображения
-async def generate_image(chat_id, formatted_schedule):
-    # Задаем ширину строки
-    column_widths = [max(formatted_schedule[col].astype(str).apply(len).max() + 1, len(str(col))) for col in formatted_schedule.columns]
-
-    # get user color settings
-    color_str = await db.get_db_data(chat_id, 'schedule_bg_color')
-    color = tuple(int(i) for i in color_str.split(','))
-
-    # Создаем изображение
-    width = sum(column_widths) * 10  # Множитель 10 для более читаемого изображения
-    height = (9 if len(formatted_schedule) != 4 else 8) * 30  # Высота строки
-    image = Image.new("RGB", (width, height), color)  # Создаем картинку с фоном с заданным цветом
-    draw = ImageDraw.Draw(image)
-
-    # Создаем шрифт по умолчанию для PIL
-    if system_type == "Windows":
-        font = ImageFont.truetype("arial.ttf", 18)  # for windows
-    elif system_type == "Linux":
-        font = ImageFont.truetype("DejaVuSans.ttf", 16)  # for linux
-    else:
-        font = ImageFont.load_default()  # ну, а кто его знает
-
-    # Устанавливаем начальные координаты для текста
-    x, y = 10, 10
-
-    # Рисуем таблицу
-    for index, row in formatted_schedule.iterrows():
-        for i, (col, width) in enumerate(zip(formatted_schedule.columns, column_widths)):
-            text = str(row[col])
-            draw.text((x, y), text, fill="black", font=font)
-            x += width * 10  # Множитель 10 для более читаемого изображения
-        y += 30  # Высота строки
-        x = 10
-
-    # Сохраняем изображение
-    image.save('bot/data/schedule.png')
-
-
-# pull schedule of day from dataframe
-async def format_schedule(schedule, schedule_day):
-    # получаем номер нужного дня
-    day_number = schedule[4 + schedule_day].fillna('-').iloc[:, 1:]
-    return day_number
-
-
 async def send_schedule(chat_id: int,  now: int = 0):
     logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} |</> now: <r>{now}, </>checking...</>')
     # получаем настройки пользователя
     settings = await db.get_db_data(
         chat_id, 'school_class', 'school_change', 'last_check_schedule',
-        'last_print_time', 'last_schedule_message_id', 'last_print_time_hour',
+        'last_print_time', 'last_print_time_hour',
         'last_print_time_day', 'prev_schedule', 'last_printed_change_time'
     )
 
     # сохраняем настройки в переменные
     school_class, school_change, last_check_schedule, \
-    last_print_time, last_schedule_message_id, last_print_time_hour, \
-    last_print_time_day, prev_schedule, last_printed_change_time = settings
+        last_print_time, last_print_time_hour, \
+        last_print_time_day, prev_schedule, last_printed_change_time = settings
 
     # Паттерн для поиска даты последнего изменения в датафрейме
     datetime_pattern = r'\d{2}\.\d{2}\.\d{4}\. (\d{2}:\d{2}:\d{2})'
@@ -129,7 +77,7 @@ async def send_schedule(chat_id: int,  now: int = 0):
             await bot.send_message(chat_id, 'Сайт умер. Следующая попытка через 15м.', disable_notification=True)
 
             # timer
-            await asyncio.sleep(config.schedule_auto_send_delay * 60)
+            await asyncio.sleep(schedule_auto_send_delay * 60)
             continue
 
     # получаем время последнего изменения расписания
@@ -243,6 +191,8 @@ async def send_schedule(chat_id: int,  now: int = 0):
 
                 last_print_time_day = local_date.day
                 last_print_time_hour = local_date.hour
+
+                await db.update_db_data(chat_id, last_schedule_message_id=schedule_message.message_id)
                 break
 
             except Exception as e:
@@ -251,8 +201,6 @@ async def send_schedule(chat_id: int,  now: int = 0):
                 await asyncio.sleep(60)
                 continue
 
-        # обновляем айди сообщения с расписанием
-        await db.update_db_data(chat_id, last_schedule_message_id=schedule_message.message_id)
 
     # обновляем значние переменных
     await db.update_db_data(chat_id,
@@ -263,3 +211,57 @@ async def send_schedule(chat_id: int,  now: int = 0):
                             last_print_time_day=last_print_time_day,
                             last_print_time_hour=last_print_time_hour
                             )
+
+
+async def text_day_of_week(schedule_day):
+    day = {0: 'Понедельник', 1: 'Вторник', 2: 'Среда', 3: 'Четверг', 4: 'Пятница', 5: 'Суббота'}[schedule_day]
+
+    return day
+
+
+# генерация изображения
+async def generate_image(chat_id, formatted_schedule):
+    # Задаем ширину строки
+    column_widths = [max(formatted_schedule[col].astype(str).apply(len).max() + 1, len(str(col))) for col in formatted_schedule.columns]
+
+    # get user color settings
+    color_str = await db.get_db_data(chat_id, 'schedule_bg_color')
+    color = tuple(int(i) for i in color_str.split(','))
+
+    # Создаем изображение
+    width = sum(column_widths) * 10  # Множитель 10 для более читаемого изображения
+    height = (9 if len(formatted_schedule) != 4 else 8) * 30  # Высота строки
+    image = Image.new("RGB", (width, height), color)  # Создаем картинку с фоном с заданным цветом
+    draw = ImageDraw.Draw(image)
+
+    # Создаем шрифт по умолчанию для PIL
+    if system_type == "Windows":
+        font = ImageFont.truetype("arial.ttf", 18)  # for windows
+    elif system_type == "Linux":
+        font = ImageFont.truetype("DejaVuSans.ttf", 16)  # for linux
+    else:
+        font = ImageFont.load_default()  # ну, а кто его знает
+
+    # Устанавливаем начальные координаты для текста
+    x, y = 10, 10
+
+    # Рисуем таблицу
+    for index, row in formatted_schedule.iterrows():
+        for i, (col, width) in enumerate(zip(formatted_schedule.columns, column_widths)):
+            text = str(row[col])
+            draw.text((x, y), text, fill="black", font=font)
+            x += width * 10  # Множитель 10 для более читаемого изображения
+        y += 30  # Высота строки
+        x = 10
+
+    # Сохраняем изображение
+    image.save('bot/data/schedule.png')
+
+
+# pull schedule of day from dataframe
+async def format_schedule(schedule, schedule_day):
+    # получаем номер нужного дня
+    day_number = schedule[4 + schedule_day].fillna('-').iloc[:, 1:]
+    return day_number
+
+

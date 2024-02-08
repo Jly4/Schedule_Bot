@@ -1,0 +1,6 @@
+.idea/
+*.log
+*.zip
+*.db
+.env
+

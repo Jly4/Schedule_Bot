@@ -12,6 +12,7 @@ from bot.database.db import bot_database as db
 from bot.utils.utils import del_msg_by_db_name, status_message_text, del_msg_by_id
 from bot.config.config_loader import status_auto_update_delay
 
+
 # Функция управляющая отправкой статуса
 async def status_auto_update(chat_id: int) -> None:
     logger.opt(colors=True).info(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | '

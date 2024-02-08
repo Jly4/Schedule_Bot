@@ -77,6 +77,44 @@ def loguru_config():
                                  f'{status_auto_update_delay}</></>')
 
 
+class CustomLogger:
+    def opt_args(self, exception: bool = False) -> dict:
+        if exception:
+            return {"colors": True, "depth": 1, "exception": True}
+        else:
+            return {"colors": True, "depth": 1}
+
+    def add_chat_id(self, chat_id: int, msg: str) -> str:
+        if not msg:
+            msg = '<y>started</>'
+
+        log = f"""<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </></>{msg}"""
+        return log
+
+    def debug(self, chat_id: int, msg: str = '', exception: bool = False):
+        logger.opt(**self.opt_args(exception)).debug(self.add_chat_id(
+            chat_id, msg))
+
+    def info(self, chat_id: int, msg: str = '', exception: bool = False):
+        logger.opt(**self.opt_args(exception)).info(self.add_chat_id(
+            chat_id, msg))
+
+    def warning(self, chat_id: int, msg: str = '', exception: bool = False):
+        logger.opt(**self.opt_args(exception)).warning(self.add_chat_id(
+            chat_id, msg))
+
+    def error(self, chat_id: int, msg: str = '', exception: bool = False):
+        logger.opt(**self.opt_args(exception)).error(self.add_chat_id(
+            chat_id, msg))
+
+    def critical(self, chat_id: int = '', msg: str = '', exception: bool =
+    False):
+        logger.opt(**self.opt_args(exception)).critical(self.add_chat_id(
+            chat_id, msg))
+
+
+custom_logger = CustomLogger()
+
 """
 First example: Traceback
 code:

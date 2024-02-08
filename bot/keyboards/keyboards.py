@@ -1,6 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from loguru import logger
+
+from bot.logs.log_config import custom_logger
 
 
 def main() -> InlineKeyboardMarkup:
@@ -58,9 +59,8 @@ def choose_class_number() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-@logger.catch
 def choose_class_letter(class_number) -> InlineKeyboardMarkup:
-    from bot.utils.utils import school_classes_dict
+    from bot.utils.utils import classes_dict
     kb = InlineKeyboardBuilder()
 
     buttons = {
@@ -75,9 +75,13 @@ def choose_class_letter(class_number) -> InlineKeyboardMarkup:
     }
 
     for callback, text in buttons.items():
-        class_existed = f'{class_number + text}' in school_classes_dict.values()
+        button_prefix = 'class_letter_'
+        school_class = callback[len(button_prefix):] + class_number
+        class_existed = f'{school_class}' in classes_dict.keys()
 
         if class_existed:
+            callback = f'set_class_{school_class}'
+            custom_logger.critical(callback)
             kb.button(text=text, callback_data=callback).adjust(3)
 
     kb.button(text='Назад', callback_data='choose_class').adjust(3)

@@ -1,7 +1,8 @@
 import sqlite3
 
 from typing import Union
-from loguru import logger
+
+from bot.logs.log_config import custom_logger
 
 
 class DatabaseClass:
@@ -36,25 +37,26 @@ class DatabaseClass:
         )
         ''')
 
-        # Создаем индекс для столбца
-        self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_id ON user_data (chat_id)")
-
-        self.connection.commit()  # save db
+        # create index for chat_id column
+        self.cursor.execute('''
+        CREATE INDEX IF NOT EXISTS
+        idx_chat_id ON user_data (chat_id)
+        ''')
+        self.connection.commit()
 
     # save db
     async def commit(self):
         self.connection.commit()
 
     async def add_new_chat_id(self, chat_id: int) -> None:
-        logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>new chat_id</>')
-        # создаем строку с ойди пользователя и временем создания
-        self.cursor.execute('INSERT INTO user_data (chat_id) VALUES (?)', (chat_id,))
+        custom_logger.debug(chat_id, '<c>new chat_id</>')
 
+        self.cursor.execute('INSERT INTO user_data (chat_id) VALUES (?)', (chat_id,))
         self.connection.commit()  # save db
 
     async def get_db_data(self, chat_id: int, *args: str) -> Union[tuple, int]:
-        logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </></>get_db_data: <cyan>{args}</>')
-        # получаем настройки пользователя
+        custom_logger.debug(chat_id, f'get_db_data: <c>{args}</>')
+
         self.cursor.execute(f'''
             SELECT {", ".join(args)}
             FROM user_data
@@ -62,25 +64,24 @@ class DatabaseClass:
         ''')
 
         data_list: list = self.cursor.fetchall()
-
         # if data is empty, user not exist in db, add user_id to db
         if not len(data_list):
-            logger.opt(colors=True).critical(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>not exist in bd</>')
+            custom_logger.critical(chat_id, '<c>not exist in bd</>')
+
             from bot.utils.status import send_status
             await self.add_new_chat_id(chat_id)
             await send_status(chat_id, edit=1)
             return await self.get_db_data(chat_id, *args)
 
         data_tuple: tuple = data_list[0]
-
-        # if one value, unpack from tuple
+        # if only one value, unpack it from tuple
         if len(data_tuple) > 1:
             return data_tuple
         else:
             return data_tuple[0]
 
     async def update_db_data(self, chat_id: int, **kwargs) -> None:
-        logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </></>update_db_data: <cyan>{kwargs.keys()}</>')
+        custom_logger.debug(chat_id, f'update_db_data: <c>{kwargs.keys()}</>')
 
         set_args = ", ".join(f"{key} = ?" for key in kwargs)
         values = tuple(kwargs.values())
@@ -91,17 +92,17 @@ class DatabaseClass:
             WHERE chat_id = ?
         ''', values + (chat_id,))
 
-        self.connection.commit()  # save db
+        self.connection.commit()
 
-    async def get_user_id_list(self) -> list:  # get list with users id
-        self.cursor.execute('SELECT chat_id FROM user_data')  # get data from db
+    async def get_user_id_list(self) -> list:
+        self.cursor.execute('SELECT chat_id FROM user_data')
 
-        user_id_list = [i[0] for i in self.cursor.fetchall()]  # list from tuple
+        user_id_list = [i[0] for i in self.cursor.fetchall()]  # unpack values
 
         return user_id_list
 
     async def delete_chat_id(self, chat_id: int) -> None:
-        logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </></>deleted')
+        custom_logger.debug(chat_id, 'deleted from db</>')
 
         self.cursor.execute(f'''
         DELETE FROM user_data
@@ -111,10 +112,9 @@ class DatabaseClass:
         self.connection.commit()
 
     async def get_status_msg_id(self, chat_id: int) -> int:
-        status_msg_id_tuple = await self.get_db_data(chat_id, 'last_status_message_id')
+        msg_id = await self.get_db_data(chat_id, 'last_status_message_id')
 
-        return status_msg_id_tuple
+        return msg_id
 
 
-# присваиваем
 bot_database = DatabaseClass('bot/database/bot_data.db')
