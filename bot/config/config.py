@@ -10,9 +10,6 @@
 # Auto send delay in min
 schedule_auto_send_delay: float = 10
 
-# Status update delay in min
-status_auto_update_delay: float = 10
-
 # The following parameter sets logging level:
 # ['AIOGRAM_DEBUG', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 # 'AIOGRAM_DEBUG' also print aiogram auto logs

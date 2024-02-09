@@ -3,6 +3,7 @@ import asyncio
 from aiogram import types
 from loguru import logger
 from typing import Union
+from datetime import datetime
 from aiogram.exceptions import TelegramBadRequest
 
 from main import bot
@@ -30,53 +31,65 @@ classes_dict = {
 
 
 async def run_bot_tasks():
-    await db.database_init()
     loguru_config()  # load loguru config
+    await db.database_init()
 
     chat_id_list = await db.get_user_id_list()
-    logger.opt(colors=True).debug(f'<y>user_id_list: '
-                                  f'<cyan>{chat_id_list}</></>\n')
-    if chat_id_list:  # if chat_id not empty
-        for chat_id in chat_id_list:
-            # get user settings
-            bot_enabled = await db.get_db_data(chat_id, 'bot_enabled')
-            auto_send_schedule = await db.get_db_data(chat_id, 'schedule_auto_send')
+    if not chat_id_list:
+        return
 
-            if bot_enabled:
-                from bot.utils.status import status_auto_update
-                task_name = f'{chat_id} status_auto_update'
-                asyncio.create_task(status_auto_update(chat_id), name=task_name)
+    for chat_id in chat_id_list:
+        bot_enabled = await db.get_db_data(chat_id, 'bot_enabled')
+        if not bot_enabled:
+            return
 
-                if auto_send_schedule:
-                    from bot.utils.schedule import schedule_auto_send
-                    task_name = f'{chat_id} schedule_auto_send'
-                    asyncio.create_task(schedule_auto_send(chat_id), name=task_name)
+        active_user = await user_is_active(chat_id)
+        if not active_user:
+            await db.delete_chat_id(chat_id)
+            continue
+
+        from bot.utils.status import send_status
+        await send_status(chat_id)
+
+        await run_task_if_disabled(chat_id, 'schedule_auto_send')
 
 
-async def del_msg_by_id(chat_id: int, message_id: types.message_id, message_name: str = '') -> None:
+async def user_is_active(chat_id: int) -> bool:
+    active_time = await db.get_db_data(chat_id, 'last_print_time')
+    if active_time == 'еще не проверялось':
+        return True
+
+    datetime_format = datetime.strptime(active_time, '%d.%m.%Y. %H:%M:%S')
+    difference = datetime.now() - datetime_format
+    if difference.days > 90:
+        custom_logger.info(chat_id, '<r>User was inactive in last 90days</>')
+        return False
+    return True
+
+
+async def del_msg_by_id(chat_id: int, msg_id: types.message_id, msg_name:
+str = '') -> None:
     try:
-        await bot.delete_message(chat_id, message_id)  # deleting message
+        await bot.delete_message(chat_id, msg_id)  # deleting message
     except TelegramBadRequest:
-        logger.opt(colors=True).debug(
-            f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>message: '
-            f'<r>{message_name}, </>error: </><r>MessageToDeleteNotFound</>')
+        msg = f'<y>message: <r>{msg_name}, </>error: </><r>MsgNotFound</>'
+        custom_logger.debug(chat_id, msg)
     except Exception as e:
-        logger.opt(exception=True, colors=True).error(
-            f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>message: '
-            f'<r>{message_name}</> error: </><r>{e}</>')
+        msg = f'<y>message: <r>{msg_name}</> error: </><r>{e}</>'
+        custom_logger.debug(chat_id, msg)
 
 
-async def del_msg_by_db_name(chat_id: int, message_id_column_name: Union[int, str]) -> None:
-    logger.opt(colors=True).debug(
-        f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>message: <r>{message_id_column_name}</></>')
+async def del_msg_by_db_name(chat_id: int, msg_id_column_name: Union[int,
+str]) -> None:
+    custom_logger.debug(chat_id, f'<y>message: <r>{msg_id_column_name}</></>')
 
-    message_id: int = await db.get_db_data(chat_id, message_id_column_name)
+    message_id: int = await db.get_db_data(chat_id, msg_id_column_name)
 
-    await del_msg_by_id(chat_id, message_id, message_id_column_name)
+    await del_msg_by_id(chat_id, message_id, msg_id_column_name)
 
 
 async def settings(chat_id: int) -> None:
-    logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>started</>')
+    custom_logger.debug(chat_id)
     from bot.utils.status import send_status
 
     await send_status(chat_id, edit=1, reply_markup=kb.settings())
@@ -97,8 +110,8 @@ async def status_message_text(chat_id: int) -> str:
     formatted_class = await format_school_class(school_class)
 
     status_message = f"""
-🔍 Последняя проверка расписания: {last_check_schedule}
-📅 Последнее изменение расписания: {last_printed_change_time}\n
+🔍 Проверка расписания: {last_check_schedule}
+📅 Изменение расписания: {last_printed_change_time}\n
 🎓 Класс: {formatted_class}
 📌 Закреплять расписание: {['Нет', 'Да'][pin_schedule_message]}\n
 ⏳ Автоматическая проверка расписания:
@@ -108,7 +121,7 @@ async def status_message_text(chat_id: int) -> str:
 
 
 async def format_school_class(school_class) -> str:
-    """return school class name to status message
+    """return school class name to a status message
 
     :param school_class:
     :return:
@@ -149,13 +162,12 @@ async def start_command(chat_id: int) -> None:
     await db.update_db_data(chat_id, schedule_auto_send=0, bot_enabled=1)
 
     await del_msg_by_db_name(chat_id, 'last_status_message_id')
-    await del_msg_by_db_name(chat_id, 'last_disable_message_id')
 
 
 async def get_admins_id_list(chat_id: int) -> list:
     chat = await bot.get_chat(chat_id)  # get chat info
-    chat_type = chat.type  # get chat type
-    logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>starting</>')
+    chat_type = chat.type  # get a chat type
+    custom_logger.debug(chat_id)
 
     if chat_type == 'private':
         return [chat_id]
@@ -164,8 +176,7 @@ async def get_admins_id_list(chat_id: int) -> list:
         admins = await bot.get_chat_administrators(chat_id)
 
         admins_list = [admin.user.id for admin in admins]
-        logger.opt(colors=True).debug(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>admin_list: <r>{admins_list}</></>')
-
+        custom_logger.debug(chat_id, f'<y>admin_list: <r>{admins_list}</></>')
 
         return admins_list
 
@@ -176,18 +187,16 @@ async def run_task_if_disabled(chat_id: int, task_name: str) -> None:
 
     for task in all_tasks:
         if task.get_name() == task_name_with_id and not task.done():
-            custom_logger.debug(chat_id, f'task: <r>{task_name} </>running</>')
+            custom_logger.debug(chat_id,
+                                f'<y>task: <r>{task_name} </>running</>')
             return
-
-    custom_logger.debug(chat_id, f'task: <r>{task_name} </>starting</>')
+    if not await db.get_db_data(chat_id, 'schedule_auto_send'):
+        custom_logger.debug(chat_id, f'<y>task: <r>{task_name} </>disabled</>')
+        return
+    custom_logger.debug(chat_id, f'<y>task: <r>{task_name} </>starting</>')
     if task_name == 'schedule_auto_send':
         from bot.utils.schedule import schedule_auto_send
         asyncio.create_task(schedule_auto_send(chat_id), name=task_name_with_id)
-
-    elif task_name == 'status_auto_update':
-        from bot.utils.status import status_auto_update
-        asyncio.create_task(status_auto_update(chat_id), name=task_name_with_id)
-
     else:
         custom_logger.error(chat_id, f'<y>Wrong task: <r>{task_name}</></>')
 
@@ -198,29 +207,31 @@ async def bot_enabled(chat_id: int) -> bool:
     if is_bot_enabled:
         return True
     else:
-        disabled_msg = await bot.send_message(chat_id, 'bot отключен, отправьте /start для включения')
+        msg = 'bot отключен, отправьте /start для включения'
+        disable_msg = await bot.send_message(chat_id, msg)
 
         await asyncio.sleep(3)
-        await bot.delete_message(chat_id, disabled_msg)
+        await bot.delete_message(chat_id, disable_msg)
 
 
-async def clear_chat(chat_id: int) -> None:
-    pass
-    """
-    if type(query) is types.CallbackQuery:
-        chat_id = query.message.chat.id  # get chat_id
-    else:
-        chat_id = query.chat.id
+async def set_schedule_bg_color(callback_query) -> None:
+    chat_id = callback_query.message.chat.id
+    custom_logger.debug(chat_id)
 
-    chat = await bot.get_chat(chat_id)  # get chat info
-    chat_type = chat.type  # get chat type
+    color_code = callback_query.data[10:22]
+    color_name = callback_query.data[22:]
 
-    if chat_type == 'private':
-        status_id = await db.get_status_msg_id(chat_id)
-    for msg_id in range(status_id + 10, status_id - 10, -1):
-        await del_msg_by_id(chat_id, msg_id)
+    await db.update_db_data(chat_id, schedule_bg_color=color_code)
+    txt = f'Установлен {color_name} цвет'
 
-        # Удаляем сообщений бота
+    from bot.utils.status import send_status
+    from bot.utils.schedule import send_schedule
+
     await del_msg_by_db_name(chat_id, 'last_schedule_message_id')
-    await del_msg_by_db_name(chat_id, 'last_status_message_id')
-    """
+    await send_status(chat_id, text=txt, reply_markup=None)
+
+    await asyncio.sleep(2)
+    await send_status(chat_id)
+    await send_schedule(chat_id, now=1)
+
+

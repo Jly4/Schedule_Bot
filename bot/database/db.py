@@ -25,7 +25,6 @@ class DatabaseClass:
         last_status_message_id INTEGER DEFAULT 0,
         last_schedule_message_id INTEGER DEFAULT 0,
         last_settings_message_id INTEGER DEFAULT 0,
-        last_disable_message_id  INTEGER DEFAULT 0,
         last_user_activity_time TEXT DEFAULT '',
         last_print_time TEXT DEFAULT 'еще не проверялось',
         last_printed_change_time TEXT DEFAULT 'еще не проверялось',
@@ -102,7 +101,7 @@ class DatabaseClass:
         return user_id_list
 
     async def delete_chat_id(self, chat_id: int) -> None:
-        custom_logger.debug(chat_id, 'deleted from db</>')
+        custom_logger.info(chat_id, '<r>Deleted from db</>')
 
         self.cursor.execute(f'''
         DELETE FROM user_data

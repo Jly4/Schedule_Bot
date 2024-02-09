@@ -2,16 +2,17 @@ import re
 import pytz
 import asyncio
 import warnings
-import traceback
 import platform
 import pandas as pd
 
-from loguru import logger
 from datetime import datetime
-from PIL import Image, ImageDraw, ImageFont
+from urllib.error import URLError
 from aiogram.types import FSInputFile
+from PIL import Image, ImageDraw, ImageFont
 
 from main import bot
+from bot.utils.status import send_status
+from bot.logs.log_config import custom_logger
 from bot.database.db import bot_database as db
 from bot.utils.utils import del_msg_by_db_name, del_msg_by_id
 from bot.config.config_loader import schedule_auto_send_delay
@@ -24,69 +25,58 @@ system_type = platform.system()
 
 
 async def schedule_auto_send(chat_id: int):
-    logger.opt(colors=True).info(f'<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </>schedule_auto_send: started</>')
-    while await db.get_db_data(chat_id, 'schedule_auto_send'):
-        # logger.opt(colors=True).info(f'<y>chat_id: <r>{chat_id}</></>')
-        await send_schedule(chat_id)  # start
+    custom_logger.debug(chat_id)
 
+    while await db.get_db_data(chat_id, 'schedule_auto_send'):
+        await send_schedule(chat_id)  # start
         await asyncio.sleep(schedule_auto_send_delay * 60)  # задержка сканирования
 
 
 async def send_schedule(chat_id: int,  now: int = 0):
-    logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} |</> now: <r>{now}, </>checking...</>')
-    # получаем настройки пользователя
+    custom_logger.debug(chat_id, f'<y> now: <r>{now}</></>')
+
     settings = await db.get_db_data(
         chat_id, 'school_class', 'school_change', 'last_check_schedule',
         'last_print_time', 'last_print_time_hour',
         'last_print_time_day', 'prev_schedule', 'last_printed_change_time'
     )
 
-    # сохраняем настройки в переменные
+    # save settings from db
     school_class, school_change, last_check_schedule, \
         last_print_time, last_print_time_hour, \
         last_print_time_day, prev_schedule, last_printed_change_time = settings
 
-    # Паттерн для поиска даты последнего изменения в датафрейме
     datetime_pattern = r'\d{2}\.\d{2}\.\d{4}\. (\d{2}:\d{2}:\d{2})'
-
-    # Обновляем текущую локальную дату и время
     local_date = datetime.now(local_timezone)
-
-    # создаем переменную для расписания
     schedule = list()
 
     # Цикл для избежания ошибок из-за недоступности сайта
     while True:
         try:
-            # Получение данных со страницы с расписанием
-            schedule = pd.read_html(f"https://lyceum.tom.ru/raspsp/index.php?k={school_class}&s={school_change}", keep_default_na=True, encoding="cp1251")  # ptcp154, also work
+            cls = school_class
+            chng = school_change
+            site = f"https://lyceum.tom.ru/raspsp/index.php?k={cls}&s={chng}"
+            schedule = pd.read_html(site,
+                                    keep_default_na=True,
+                                    encoding="cp1251"
+                                    )  # ptcp154, also work
             last_check_schedule = local_date.strftime('%d.%m.%Y %H:%M:%S')
-            logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} |</> now: <r>{now}, </>parsing schedule</>')
-
-
             break
 
-        except Exception as e:
-            # Здесь мы печатаем полную информацию об ошибке
-            traceback.print_exc()
-
-            # Можете также обработать ошибку более детально или выполнить другие действия
-            logger.opt(exception=True).error(f'Site parse error:\n{e}')
-
-            # Уведомление о недоступности сайта
-            await bot.send_message(chat_id, 'Сайт умер. Следующая попытка через 15м.', disable_notification=True)
-
-            # timer
+        except URLError:
+            custom_logger.critical('site unreachable')
             await asyncio.sleep(schedule_auto_send_delay * 60)
-            continue
+
+        except Exception as e:
+            custom_logger.critical(f'Site parse error:\n{e}')
+            await asyncio.sleep(schedule_auto_send_delay * 60)
+
 
     # получаем время последнего изменения расписания
     schedule_change_time = re.search(datetime_pattern, schedule[3][0][0]).group()
 
     # получаем schedule в виде json
     formatted_schedule = await format_schedule(schedule, local_date.weekday())
-
-    # форматируем в json
     schedule_json = formatted_schedule.to_json()
 
     # Функция определяет, будет ли выполняться отправка расписания и если да, то на какой день недели
@@ -114,27 +104,27 @@ async def send_schedule(chat_id: int,  now: int = 0):
             if weekend_condition:  # сейчас не ((суббота и больше 9) или (воскресенье и меньше 20))
                 if printed_schedule_change:  # Расписание изменилось на сегодняшний день
                     if hour < 15:
-                        logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>send logic condition: <r>1</></>')
+                        custom_logger.debug(chat_id, '<y>send logic condition: <r>1</></>')
                         result = [1, 0]  # если оно изменилось, и сейчас меньше 15, то обновляем
                     else:
-                        logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>send logic condition: <r>2</></>')
+                        custom_logger.debug(chat_id, '<y>send logic condition: <r>2</></>')
                         result = [1, 1]  # если сейчас больше 15, то отправляем на завтра
                 else:
-                    logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>send logic condition: <r>3</></>')
+                    custom_logger.debug(chat_id, '<y>send logic condition: <r>3</></>')
                     result = [1, 1]  # если не изменилось, то отправляем на завтра
             else:
-                logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>send logic condition: <r>4</></>')
+                custom_logger.debug(chat_id, '<y>send logic condition: <r>4</></>')
                 result = [0, 0]  # то не отправляем
         else:
             if print_to_tomorrow:  # если не печаталось на завтра
                 if hour > 20 and weekend_condition:  # если больше 20
-                    logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>send logic condition: <r>5</></>')
+                    custom_logger.debug(chat_id, '<y>send logic condition: <r>5</></>')
                     result = [1, 1]  # то отправляем на завтра
                 else:
-                    logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>send logic condition: <r>6</></>')
+                    custom_logger.debug(chat_id, '<y>send logic condition: <r>6</></>')
                     result = [0, 0]  # то не отправляем
             else:
-                logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>send logic condition: <r>7</></>')
+                custom_logger.debug(chat_id, '<y>send logic condition: <r>7</></>')
                 result = [0, 0]  # то не отправляем
 
         # меняем воскресенье после 20 на понедельник
@@ -146,7 +136,8 @@ async def send_schedule(chat_id: int,  now: int = 0):
 
     # send_logic
     send_logic_res = send_logic(local_date, schedule_change_time, last_printed_change_time, prev_schedule, last_print_time_day, last_print_time_hour, schedule_json)
-    logger.opt(colors=True).debug(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} | </>send logic res: {send_logic_res}, now: <r>{now}</></>')
+    msg = f'<y>send logic res: {send_logic_res}, now: <r>{now}</></>'
+    custom_logger.error(chat_id, msg)
 
     # Отправляем расписание если send_logic_res[0] == 1
     if send_logic_res[0] or now:
@@ -170,39 +161,39 @@ async def send_schedule(chat_id: int,  now: int = 0):
 
         # генерируем изображение в папку temp
         await generate_image(chat_id, formatted_schedule)
-
-        # цикл отправляющий картинку с текстом в телеграм
-        # видимо иногда выдает ошибку и выключает бота, по этому через while и try-except
         while True:
             try:
                 text = f'{await text_day_of_week(schedule_day)} - Последние изменение: [{last_printed_change_time}]\n\n' # text
 
                 # Отправляем фотографию
                 schedule_img = FSInputFile("bot/data/schedule.png")
-                schedule_message = await bot.send_photo(chat_id, caption=text, photo=schedule_img)
+                schedule_msg = await bot.send_photo(chat_id, caption=text,
+                                                  photo=schedule_img)
 
                 if await db.get_db_data(chat_id, 'pin_schedule_message'):
                     # Закрепляем сообщение
-                    await bot.pin_chat_message(chat_id=chat_id, message_id=schedule_message.message_id)
-
+                    await bot.pin_chat_message(chat_id=chat_id,
+                                               message_id=schedule_msg.message_id)
                     # delete service message "bot pinned message"
-                    await del_msg_by_id(chat_id, message_id=schedule_message.message_id + 1)
-                    logger.opt(colors=True).info(f'<yellow>chat_id: <r>{f"{chat_id}".rjust(15)} |</> now: <r>{now}, </>printed</>')
+                    await del_msg_by_id(chat_id, schedule_msg.message_id + 1)
+                    custom_logger.error(chat_id, f'<y>now: <r>{now}, </>printed</>')
 
                 last_print_time_day = local_date.day
                 last_print_time_hour = local_date.hour
 
-                await db.update_db_data(chat_id, last_schedule_message_id=schedule_message.message_id)
+                await db.update_db_data(chat_id,
+                                        last_schedule_message_id=schedule_msg.message_id)
+
+                await asyncio.sleep(1)
+                await send_status(chat_id)
                 break
 
             except Exception as e:
-                # Можете также обработать ошибку более детально или выполнить другие действия
-                logger.opt(colors=True, exception=True).error(f'<y>Schedule image to bot sending error: <r>{e}</></>')
+                msg = f'<y>Schedule image to bot sending error: <r>{e}</></>'
+                custom_logger.error(chat_id, msg)
                 await asyncio.sleep(60)
                 continue
 
-
-    # обновляем значние переменных
     await db.update_db_data(chat_id,
                             last_print_time=last_print_time,
                             last_printed_change_time=last_printed_change_time,
@@ -214,8 +205,13 @@ async def send_schedule(chat_id: int,  now: int = 0):
 
 
 async def text_day_of_week(schedule_day):
-    day = {0: 'Понедельник', 1: 'Вторник', 2: 'Среда', 3: 'Четверг', 4: 'Пятница', 5: 'Суббота'}[schedule_day]
-
+    day = {0: 'Понедельник',
+           1: 'Вторник',
+           2: 'Среда',
+           3: 'Четверг',
+           4: 'Пятница',
+           5: 'Суббота'
+           }[schedule_day]
     return day
 
 

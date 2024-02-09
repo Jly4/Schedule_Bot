@@ -1,8 +1,6 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from bot.logs.log_config import custom_logger
-
 
 def main() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
@@ -37,7 +35,7 @@ def settings() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def choose_class_number() -> InlineKeyboardMarkup:
+def choose_class_num() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     buttons = {
         'class_number_1': '1',
@@ -81,7 +79,6 @@ def choose_class_letter(class_number) -> InlineKeyboardMarkup:
 
         if class_existed:
             callback = f'set_class_{school_class}'
-            custom_logger.critical(callback)
             kb.button(text=text, callback_data=callback).adjust(3)
 
     kb.button(text='Назад', callback_data='choose_class').adjust(3)
@@ -103,12 +100,18 @@ def choose_color() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
 
     buttons = {
-        'default_colour': 'Цвет по умолчанию',
+        'set color 255,204,153 Оранжевый': 'Оранжевый',
+        'set color 255,255,143 желтый': 'Желтый',
+        'set color 192,255,192 зеленый': 'Зеленый',
+        'set color 204,255,255 голубой': 'Голубой',
+        'set color 255,204,255 розовый': 'Розовый',
+        'set color 192,192,255 фиолетовый': 'Фиолетовый',
+        'set color 256,256,256 серый': 'Белый',
         'settings': 'Назад'
     }
 
     for callback, text in buttons.items():
-        kb.button(text=text, callback_data=callback).adjust(2)
+        kb.button(text=text, callback_data=callback).adjust(3)
 
     return kb.as_markup()
 

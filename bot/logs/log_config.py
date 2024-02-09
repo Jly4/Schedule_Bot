@@ -4,13 +4,15 @@ import logging
 from loguru import logger
 
 from bot.config.config_loader import console_log_level, \
-    schedule_auto_send_delay, status_auto_update_delay
+    schedule_auto_send_delay
 
 
 class InterceptHandler(logging.Handler):
     def emit(self, record):
         level = logger.level(record.levelname).name
-        logger.log(level, record.getMessage())
+        msg = (f'<white>{"--AIOGRAM--".center(23)}</> <r>|'
+               f'</> <y>{record.getMessage()}</>')
+        logger.opt(depth=3, colors=True).log(level, msg)
 
 
 # logging config
@@ -46,7 +48,6 @@ def loguru_config():
     # add custom level colors
     level = {
         "TRACE": "<cyan>",
-        "DEBUG": "<blue>",
         "INFO": "<green>",
         "SUCCESS": "<green>",
         "WARNING": "<yellow>",
@@ -73,16 +74,14 @@ def loguru_config():
     logger.opt(colors=True).info(f'<y>log level: <r>{log_level}</></>')
     logger.opt(colors=True).info(f'<y>schedule_auto_send_delay = <r>'
                                  f'{schedule_auto_send_delay}</></>')
-    logger.opt(colors=True).info(f'<y>status_auto_update_delay = <r>'
-                                 f'{status_auto_update_delay}</></>')
 
 
 class CustomLogger:
-    def opt_args(self, exception: bool = False) -> dict:
+    def opt_args(self, exception: bool = False, depth: int = 1) -> dict:
         if exception:
-            return {"colors": True, "depth": 1, "exception": True}
+            return {"colors": True, "depth": depth, "exception": True}
         else:
-            return {"colors": True, "depth": 1}
+            return {"colors": True, "depth": depth}
 
     def add_chat_id(self, chat_id: int, msg: str) -> str:
         if not msg:
@@ -91,127 +90,25 @@ class CustomLogger:
         log = f"""<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </></>{msg}"""
         return log
 
-    def debug(self, chat_id: int, msg: str = '', exception: bool = False):
-        logger.opt(**self.opt_args(exception)).debug(self.add_chat_id(
+    def debug(self, chat_id: int, msg: str = '', **kwargs) -> None:
+        logger.opt(**self.opt_args(**kwargs)).debug(self.add_chat_id(
             chat_id, msg))
 
-    def info(self, chat_id: int, msg: str = '', exception: bool = False):
-        logger.opt(**self.opt_args(exception)).info(self.add_chat_id(
+    def info(self, chat_id: int, msg: str = '', **kwargs) -> None:
+        logger.opt(**self.opt_args(**kwargs)).info(self.add_chat_id(
             chat_id, msg))
 
-    def warning(self, chat_id: int, msg: str = '', exception: bool = False):
-        logger.opt(**self.opt_args(exception)).warning(self.add_chat_id(
+    def warning(self, chat_id: int, msg: str = '', **kwargs) -> None:
+        logger.opt(**self.opt_args(**kwargs)).warning(self.add_chat_id(
             chat_id, msg))
 
-    def error(self, chat_id: int, msg: str = '', exception: bool = False):
-        logger.opt(**self.opt_args(exception)).error(self.add_chat_id(
+    def error(self, chat_id: int, msg: str = '', **kwargs) -> None:
+        logger.opt(**self.opt_args(**kwargs)).error(self.add_chat_id(
             chat_id, msg))
 
-    def critical(self, chat_id: int = '', msg: str = '', exception: bool =
-    False):
-        logger.opt(**self.opt_args(exception)).critical(self.add_chat_id(
+    def critical(self, chat_id: int = '', msg: str = '', **kwargs) -> None:
+        logger.opt(**self.opt_args(**kwargs)).critical(self.add_chat_id(
             chat_id, msg))
 
 
 custom_logger = CustomLogger()
-
-"""
-First example: Traceback
-code:
-    
-    try:
-        def zero_dev(a, b):
-            res = a / b
-
-        zero_dev(0, 0)
-    except Exception as e:
-        logger.opt(exception=True).info(f"An error occurred: {e}")
-
-
-output:
-
-2024-02-02 16:28:29.670 | INFO     | bot.logs.log_config  : loguru_config   : 48  - An error occurred: division by zero
-Traceback (most recent call last):
-
-      File "path", line 65, in <module>
-        executor.start_polling(dp, skip_updates=False, relax=1)
-        │        │             └ <aiogram.dispatcher.dispatcher.Dispatcher object at 0x000001B8FEFB7550>
-        │        └ <function start_polling at 0x000001B8FFE5E700>
-        └ <module 'aiogram.utils.executor' from 'C:\\Users\\user\\AppData\\Local\\pypoetry\\Cache\\virtualenvs\\schedule-bot-URf48MFE-p...
-    
-      File "path", line 45, in start_polling
-        executor.start_polling(
-        │        └ <function Executor.start_polling at 0x000001B8FFE71C60>
-        └ <aiogram.utils.executor.Executor object at 0x000001B897E9B590>
-      File "path", line 320, in start_polling
-        loop.run_until_complete(self._startup_polling())
-        │    │                  │    └ <function Executor._startup_polling at 0x000001B8FFE71F80>
-        │    │                  └ <aiogram.utils.executor.Executor object at 0x000001B897E9B590>
-        │    └ <function BaseEventLoop.run_until_complete at 0x000001B8FE47F6A0>
-        └ <ProactorEventLoop running=True closed=False debug=False>
-      File "path", line 640, in run_until_complete
-        self.run_forever()
-        │    └ <function ProactorEventLoop.run_forever at 0x000001B8FE54F600>
-        └ <ProactorEventLoop running=True closed=False debug=False>
-      File "path", line 321, in run_forever
-        super().run_forever()
-      File "path", line 607, in run_forever
-        self._run_once()
-        │    └ <function BaseEventLoop._run_once at 0x000001B8FE489440>
-        └ <ProactorEventLoop running=True closed=False debug=False>
-      File "path", line 1922, in _run_once
-        handle._run()
-        │      └ <function Handle._run at 0x000001B8FE3CEAC0>
-        └ <Handle <TaskStepMethWrapper object at 0x000001B8982B1E10>()>
-      File "path", line 80, in _run
-        self._context.run(self._callback, *self._args)
-        │    │            │    │           │    └ <member '_args' of 'Handle' objects>
-        │    │            │    │           └ <Handle <TaskStepMethWrapper object at 0x000001B8982B1E10>()>
-        │    │            │    └ <member '_callback' of 'Handle' objects>
-        │    │            └ <Handle <TaskStepMethWrapper object at 0x000001B8982B1E10>()>
-        │    └ <member '_context' of 'Handle' objects>
-        └ <Handle <TaskStepMethWrapper object at 0x000001B8982B1E10>()>
-    
-      File "path", line 19, in run_bot
-        await loguru_config()
-              └ <function loguru_config at 0x000001B8FFEBD260>
-    
-    > File "path", line 49, in loguru_config
-        zero_dev(0, 0)
-        └ <function loguru_config.<locals>.zero_dev at 0x000001B8FE554E00>
-    
-      File "path", line 47, in zero_dev
-        res = a / b
-              │   └ 0
-              └ 0
-    
-    ZeroDivisionError: division by zero
-
-
-Second example: ignore depth
-
-code:
-    def wrapped_function():
-        logger.opt(depth=0).info("Log message within the context of the parent function")
-
-    wrapped_function() 
-    
-    def wrapped_function():
-        logger.opt(depth=1).info("Log message within the context of the parent function")
-
-    wrapped_function() 
-    
-    def wrapped_function():
-        logger.opt(depth=2).info("Log message within the context of the parent function")
-
-    wrapped_function() 
-    
-output:
-    2024-02-02 16:30:03.110 | INFO     | bot.logs.log_config  : wrapped_function : 43  - Log message within the context of the parent function
-                                                                ^^^^^^^^^^^^^^^
-    2024-02-02 16:30:03.110 | INFO     | bot.logs.log_config  : loguru_config   : 50  - Log message within the context of the parent function
-                                                               ^^^^^^^^^^^^^^^
-    2024-02-02 16:30:03.111 | INFO     | __main__             : run_bot         : 19  - Log message within the context of the parent function
-                                                               ^^^^^^^^^^^^^^^
-
-"""
