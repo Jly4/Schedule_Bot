@@ -1,6 +1,7 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+from bot.config.config_loader import classes_dict
 
 def main() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
@@ -58,7 +59,6 @@ def choose_class_num() -> InlineKeyboardMarkup:
 
 
 def choose_class_letter(class_number) -> InlineKeyboardMarkup:
-    from bot.utils.utils import classes_dict
     kb = InlineKeyboardBuilder()
 
     buttons = {
@@ -106,7 +106,7 @@ def choose_color() -> InlineKeyboardMarkup:
         'set color 204,255,255 голубой': 'Голубой',
         'set color 255,204,255 розовый': 'Розовый',
         'set color 192,192,255 фиолетовый': 'Фиолетовый',
-        'set color 256,256,256 серый': 'Белый',
+        'set color 256,256,256 Белый': 'Белый',
         'settings': 'Назад'
     }
 
@@ -114,15 +114,3 @@ def choose_color() -> InlineKeyboardMarkup:
         kb.button(text=text, callback_data=callback).adjust(3)
 
     return kb.as_markup()
-
-
-def dev() -> InlineKeyboardMarkup:
-    """keyboard for edit settings
-    """
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text='...', callback_data='status'),
-            InlineKeyboardButton(text='Назад', callback_data='status')
-        ]
-    ])
-    return kb

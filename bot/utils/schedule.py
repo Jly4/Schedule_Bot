@@ -7,15 +7,16 @@ import pandas as pd
 
 from datetime import datetime
 from urllib.error import URLError
-from aiogram.types import FSInputFile
 from PIL import Image, ImageDraw, ImageFont
+from aiogram.types import FSInputFile, CallbackQuery
 
 from main import bot
 from bot.utils.status import send_status
+from bot.database.database import db as db
 from bot.logs.log_config import custom_logger
-from bot.database.db import bot_database as db
-from bot.utils.utils import del_msg_by_db_name, del_msg_by_id
 from bot.config.config_loader import schedule_auto_send_delay
+from bot.utils.messages import del_msg_by_db_name, del_msg_by_id
+from bot.utils.utils import run_task_if_disabled
 
 # Подавление предупреждений BeautifulSoup
 warnings.filterwarnings("ignore", category=UserWarning, module="bs4")
@@ -29,10 +30,11 @@ async def schedule_auto_send(chat_id: int):
 
     while await db.get_db_data(chat_id, 'schedule_auto_send'):
         await send_schedule(chat_id)  # start
-        await asyncio.sleep(schedule_auto_send_delay * 60)  # задержка сканирования
+        await asyncio.sleep(
+            schedule_auto_send_delay * 60)  # задержка сканирования
 
 
-async def send_schedule(chat_id: int,  now: int = 0):
+async def send_schedule(chat_id: int, now: int = 0):
     custom_logger.debug(chat_id, f'<y> now: <r>{now}</></>')
 
     settings = await db.get_db_data(
@@ -48,7 +50,6 @@ async def send_schedule(chat_id: int,  now: int = 0):
 
     datetime_pattern = r'\d{2}\.\d{2}\.\d{4}\. (\d{2}:\d{2}:\d{2})'
     local_date = datetime.now(local_timezone)
-    schedule = list()
 
     # Цикл для избежания ошибок из-за недоступности сайта
     while True:
@@ -71,9 +72,9 @@ async def send_schedule(chat_id: int,  now: int = 0):
             custom_logger.critical(f'Site parse error:\n{e}')
             await asyncio.sleep(schedule_auto_send_delay * 60)
 
-
     # получаем время последнего изменения расписания
-    schedule_change_time = re.search(datetime_pattern, schedule[3][0][0]).group()
+    schedule_change_time = re.search(datetime_pattern,
+                                     schedule[3][0][0]).group()
 
     # получаем schedule в виде json
     formatted_schedule = await format_schedule(schedule, local_date.weekday())
@@ -82,7 +83,9 @@ async def send_schedule(chat_id: int,  now: int = 0):
     # Функция определяет, будет ли выполняться отправка расписания и если да, то на какой день недели
     # Функция возвращает лист, например [0, 0]. Первая цифра отвечает за то, будет ли выполняться отправка,
     # вторая за то в какой день она будет выполняться
-    def send_logic(local_date, schedule_change_time, last_printed_change_time, prev_schedule, last_print_time_day, last_print_time_hour, schedule_json):
+    def send_logic(schedule_change_time, last_printed_change_time,
+                   prev_schedule, last_print_time_day, last_print_time_hour,
+                   schedule_json):
         # создаем переменные для часа и дня недели
         hour = local_date.hour
         weekday = local_date.weekday()
@@ -92,10 +95,13 @@ async def send_schedule(chat_id: int,  now: int = 0):
 
         # изменилось ли расписание текущего дня
         # либо если last_print_time_day (== первый запуск)
-        printed_schedule_change = now == 1 or (prev_schedule != schedule_json) and (last_print_time_day == local_date.day)
+        printed_schedule_change = now == 1 or (
+                    prev_schedule != schedule_json) and (
+                                              last_print_time_day == local_date.day)
 
-        # сейчас не ( (суббота и больше 9) или (воскресенье и меньше 20) )
-        weekend_condition = not ((int(weekday) == 5 and int(hour) > 9) or (int(weekday) == 6 and int(hour) < 20))
+        # сейчас не ((суббота и больше 9) или (воскресенье и меньше 20))
+        weekend_condition = not ((int(weekday) == 5 and int(hour) > 9) or (
+                    int(weekday) == 6 and int(hour) < 20))
 
         # Не печаталось на завтра
         print_to_tomorrow = last_print_time_day != local_date.day or last_print_time_hour < 15
@@ -104,27 +110,37 @@ async def send_schedule(chat_id: int,  now: int = 0):
             if weekend_condition:  # сейчас не ((суббота и больше 9) или (воскресенье и меньше 20))
                 if printed_schedule_change:  # Расписание изменилось на сегодняшний день
                     if hour < 15:
-                        custom_logger.debug(chat_id, '<y>send logic condition: <r>1</></>')
-                        result = [1, 0]  # если оно изменилось, и сейчас меньше 15, то обновляем
+                        custom_logger.debug(chat_id,
+                                            '<y>send logic condition: <r>1</></>')
+                        result = [1,
+                                  0]  # если оно изменилось, и сейчас меньше 15, то обновляем
                     else:
-                        custom_logger.debug(chat_id, '<y>send logic condition: <r>2</></>')
-                        result = [1, 1]  # если сейчас больше 15, то отправляем на завтра
+                        custom_logger.debug(chat_id,
+                                            '<y>send logic condition: <r>2</></>')
+                        result = [1,
+                                  1]  # если сейчас больше 15, то отправляем на завтра
                 else:
-                    custom_logger.debug(chat_id, '<y>send logic condition: <r>3</></>')
-                    result = [1, 1]  # если не изменилось, то отправляем на завтра
+                    custom_logger.debug(chat_id,
+                                        '<y>send logic condition: <r>3</></>')
+                    result = [0,
+                              1]  # если не изменилось, то отправляем на завтра
             else:
-                custom_logger.debug(chat_id, '<y>send logic condition: <r>4</></>')
+                custom_logger.debug(chat_id,
+                                    '<y>send logic condition: <r>4</></>')
                 result = [0, 0]  # то не отправляем
         else:
             if print_to_tomorrow:  # если не печаталось на завтра
                 if hour > 20 and weekend_condition:  # если больше 20
-                    custom_logger.debug(chat_id, '<y>send logic condition: <r>5</></>')
+                    custom_logger.debug(chat_id,
+                                        '<y>send logic condition: <r>5</></>')
                     result = [1, 1]  # то отправляем на завтра
                 else:
-                    custom_logger.debug(chat_id, '<y>send logic condition: <r>6</></>')
+                    custom_logger.debug(chat_id,
+                                        '<y>send logic condition: <r>6</></>')
                     result = [0, 0]  # то не отправляем
             else:
-                custom_logger.debug(chat_id, '<y>send logic condition: <r>7</></>')
+                custom_logger.debug(chat_id,
+                                    '<y>send logic condition: <r>7</></>')
                 result = [0, 0]  # то не отправляем
 
         # меняем воскресенье после 20 на понедельник
@@ -135,7 +151,10 @@ async def send_schedule(chat_id: int,  now: int = 0):
         return result
 
     # send_logic
-    send_logic_res = send_logic(local_date, schedule_change_time, last_printed_change_time, prev_schedule, last_print_time_day, last_print_time_hour, schedule_json)
+    send_logic_res = send_logic(schedule_change_time,
+                                last_printed_change_time, prev_schedule,
+                                last_print_time_day, last_print_time_hour,
+                                schedule_json)
     msg = f'<y>send logic res: {send_logic_res}, now: <r>{now}</></>'
     custom_logger.error(chat_id, msg)
 
@@ -163,12 +182,13 @@ async def send_schedule(chat_id: int,  now: int = 0):
         await generate_image(chat_id, formatted_schedule)
         while True:
             try:
-                text = f'{await text_day_of_week(schedule_day)} - Последние изменение: [{last_printed_change_time}]\n\n' # text
+                text = (f'{await text_day_of_week(schedule_day)} - последние '
+                        f'изменение: [{last_printed_change_time}]\n\n')
 
                 # Отправляем фотографию
                 schedule_img = FSInputFile("bot/data/schedule.png")
                 schedule_msg = await bot.send_photo(chat_id, caption=text,
-                                                  photo=schedule_img)
+                                                    photo=schedule_img)
 
                 if await db.get_db_data(chat_id, 'pin_schedule_message'):
                     # Закрепляем сообщение
@@ -176,7 +196,8 @@ async def send_schedule(chat_id: int,  now: int = 0):
                                                message_id=schedule_msg.message_id)
                     # delete service message "bot pinned message"
                     await del_msg_by_id(chat_id, schedule_msg.message_id + 1)
-                    custom_logger.error(chat_id, f'<y>now: <r>{now}, </>printed</>')
+                    custom_logger.error(chat_id,
+                                        f'<y>now: <r>{now}, </>printed</>')
 
                 last_print_time_day = local_date.day
                 last_print_time_hour = local_date.hour
@@ -184,8 +205,6 @@ async def send_schedule(chat_id: int,  now: int = 0):
                 await db.update_db_data(chat_id,
                                         last_schedule_message_id=schedule_msg.message_id)
 
-                await asyncio.sleep(1)
-                await send_status(chat_id)
                 break
 
             except Exception as e:
@@ -202,9 +221,10 @@ async def send_schedule(chat_id: int,  now: int = 0):
                             last_print_time_day=last_print_time_day,
                             last_print_time_hour=last_print_time_hour
                             )
+    await send_status(chat_id)
 
 
-async def text_day_of_week(schedule_day):
+async def text_day_of_week(schedule_day) -> str:
     day = {0: 'Понедельник',
            1: 'Вторник',
            2: 'Среда',
@@ -218,16 +238,20 @@ async def text_day_of_week(schedule_day):
 # генерация изображения
 async def generate_image(chat_id, formatted_schedule):
     # Задаем ширину строки
-    column_widths = [max(formatted_schedule[col].astype(str).apply(len).max() + 1, len(str(col))) for col in formatted_schedule.columns]
+    column_widths = [
+        max(formatted_schedule[col].astype(str).apply(len).max() + 1,
+            len(str(col))) for col in formatted_schedule.columns]
 
     # get user color settings
     color_str = await db.get_db_data(chat_id, 'schedule_bg_color')
     color = tuple(int(i) for i in color_str.split(','))
 
     # Создаем изображение
-    width = sum(column_widths) * 10  # Множитель 10 для более читаемого изображения
+    width = sum(
+        column_widths) * 10  # Множитель 10 для более читаемого изображения
     height = (9 if len(formatted_schedule) != 4 else 8) * 30  # Высота строки
-    image = Image.new("RGB", (width, height), color)  # Создаем картинку с фоном с заданным цветом
+    image = Image.new("RGB", (width, height),
+                      color)  # Создаем картинку с фоном с заданным цветом
     draw = ImageDraw.Draw(image)
 
     # Создаем шрифт по умолчанию для PIL
@@ -243,7 +267,8 @@ async def generate_image(chat_id, formatted_schedule):
 
     # Рисуем таблицу
     for index, row in formatted_schedule.iterrows():
-        for i, (col, width) in enumerate(zip(formatted_schedule.columns, column_widths)):
+        for i, (col, width) in enumerate(
+                zip(formatted_schedule.columns, column_widths)):
             text = str(row[col])
             draw.text((x, y), text, fill="black", font=font)
             x += width * 10  # Множитель 10 для более читаемого изображения
@@ -255,9 +280,44 @@ async def generate_image(chat_id, formatted_schedule):
 
 
 # pull schedule of day from dataframe
-async def format_schedule(schedule, schedule_day):
+async def format_schedule(schedule, schedule_day) -> pd.DataFrame:
     # получаем номер нужного дня
     day_number = schedule[4 + schedule_day].fillna('-').iloc[:, 1:]
     return day_number
 
 
+async def turn_schedule_pin(callback_query: CallbackQuery) -> None:
+    chat_id = callback_query.message.chat.id
+    if await db.get_db_data(chat_id, 'pin_schedule_message'):
+        await db.update_db_data(chat_id, pin_schedule_message=0)
+
+        txt = 'Закрепление сообщений с расписанием выключено'
+        await send_status(chat_id, text=txt, reply_markup=None)
+
+    else:
+        await db.update_db_data(chat_id, pin_schedule_message=1)
+
+        txt = 'Закрепление сообщений с расписанием включено'
+        await send_status(chat_id, text=txt, reply_markup=None)
+
+    await asyncio.sleep(1.5)  # timer
+    await send_status(chat_id)
+
+
+async def turn_schedule(callback_query: CallbackQuery) -> None:
+    chat_id = callback_query.message.chat.id
+    if await db.get_db_data(chat_id, 'schedule_auto_send'):
+        await db.update_db_data(chat_id, schedule_auto_send=0)
+
+        txt = 'Автоматическое получение расписания выключено'
+        await send_status(chat_id, text=txt, reply_markup=None)
+        await asyncio.sleep(1)
+        await send_status(chat_id)
+
+    else:
+        await db.update_db_data(chat_id, schedule_auto_send=1)
+
+        txt = 'Автоматическое получение расписания включено'
+        await send_status(chat_id, text=txt, reply_markup=None)
+        await send_schedule(chat_id, now=1)
+        await run_task_if_disabled(chat_id, 'schedule_auto_send')

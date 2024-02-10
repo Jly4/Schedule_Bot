@@ -4,7 +4,7 @@
 
 *Telegram Tag*: @schedule_pars_bot
 
-*Current Status*: Developement
+*Current Status*: Development
 
 
 

@@ -1,14 +1,17 @@
 from typing import Optional
+
 from loguru import logger
 from aiogram.utils.keyboard import InlineKeyboardMarkup
+
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
 from main import bot
+from bot.database.database import db
 from bot.keyboards import keyboards as kb
 from bot.logs.log_config import custom_logger
-from bot.database.db import bot_database as db
-from bot.utils.utils import del_msg_by_db_name, status_message_text, \
-    del_msg_by_id
+from bot.config.config_loader import classes_dict
+from bot.utils.messages import del_msg_by_db_name, del_msg_by_id
+
 
 
 async def send_status(
@@ -102,3 +105,29 @@ async def send_status(
             logger.opt(colors=True, exception=True).error(
                 f'<y>chat_id: <r>{f"{chat_id}".ljust(15)} | </>send failed '
                 f'<r>{e}</></>')
+
+
+async def status_message_text(chat_id: int) -> str:
+    settings = await db.get_db_data(chat_id,
+                                    'pin_schedule_message',
+                                    'schedule_auto_send',
+                                    'school_class',
+                                    'last_printed_change_time',
+                                    'last_check_schedule')
+
+    # save settings into variables
+    pin_schedule_message, schedule_auto_send, school_class, \
+        last_printed_change_time, last_check_schedule = settings
+
+    formatted_class = classes_dict[school_class]
+
+    status_message = f"""
+🔍 Проверка расписания: {last_check_schedule}
+📅 Изменение расписания: {last_printed_change_time}\n
+🎓 Класс: {formatted_class}
+📌 Закреплять расписание: {['Нет', 'Да'][pin_schedule_message]}\n
+⏳ Автоматическая проверка расписания:
+{['🔴 Выключена', "🟢 Включена, проверка выполняется раз в 10 минут"][schedule_auto_send]}
+"""
+    return status_message
+

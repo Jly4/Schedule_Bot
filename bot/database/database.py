@@ -50,7 +50,9 @@ class DatabaseClass:
     async def add_new_chat_id(self, chat_id: int) -> None:
         custom_logger.debug(chat_id, '<c>new chat_id</>')
 
-        self.cursor.execute('INSERT INTO user_data (chat_id) VALUES (?)', (chat_id,))
+        self.cursor.execute('INSERT INTO user_data (chat_id) '
+                            'VALUES (?)', (chat_id,))
+
         self.connection.commit()  # save db
 
     async def get_db_data(self, chat_id: int, *args: str) -> Union[tuple, int]:
@@ -63,7 +65,7 @@ class DatabaseClass:
         ''')
 
         data_list: list = self.cursor.fetchall()
-        # if data is empty, user not exist in db, add user_id to db
+        # if data is empty, user not exists in db, add user_id to db
         if not len(data_list):
             custom_logger.critical(chat_id, '<c>not exist in bd</>')
 
@@ -115,5 +117,33 @@ class DatabaseClass:
 
         return msg_id
 
+    async def get_logic_settings(self, chat_id: int) -> tuple:
+        custom_logger.debug(chat_id)
+        settings = (
+            'school_class', 'school_change', 'last_check_schedule',
+            'last_print_time', 'last_print_time_hour',
+            'last_print_time_day', 'prev_schedule', 'last_printed_change_time'
+        )
 
-bot_database = DatabaseClass('bot/database/bot_data.db')
+        self.cursor.execute(f'''
+        SELECT {", ".join(settings)}
+        FROM user_data
+        WHERE chat_id = {chat_id}
+    ''')
+
+        settings_list: list = self.cursor.fetchall()
+        # if data is empty, user not exists in db, add user_id to db
+        if not len(settings_list):
+            custom_logger.critical(chat_id, '<c>not exist in bd</>')
+
+            from bot.utils.status import send_status
+            await self.add_new_chat_id(chat_id)
+            await send_status(chat_id, edit=1)
+            return await self.get_logic_settings(chat_id)
+
+        settings_tuple: tuple = settings_list[0]
+
+        return settings_tuple
+
+
+db = DatabaseClass('bot/database/bot_data.db')
