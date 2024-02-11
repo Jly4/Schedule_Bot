@@ -13,7 +13,6 @@ from bot.config.config_loader import classes_dict
 from bot.utils.messages import del_msg_by_db_name, del_msg_by_id
 
 
-
 async def send_status(
         chat_id: int,
         text: str = '',

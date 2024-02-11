@@ -6,7 +6,6 @@ import platform
 import pandas as pd
 
 from datetime import datetime
-from urllib.error import URLError
 from PIL import Image, ImageDraw, ImageFont
 from aiogram.types import FSInputFile, CallbackQuery
 
@@ -17,6 +16,8 @@ from bot.logs.log_config import custom_logger
 from bot.config.config_loader import schedule_auto_send_delay
 from bot.utils.messages import del_msg_by_db_name, del_msg_by_id
 from bot.utils.utils import run_task_if_disabled
+from bot.utils.schedule_logic import ScheduleLogic
+from bot.keyboards import keyboards as kb
 
 # Подавление предупреждений BeautifulSoup
 warnings.filterwarnings("ignore", category=UserWarning, module="bs4")
@@ -29,202 +30,72 @@ async def schedule_auto_send(chat_id: int):
     custom_logger.debug(chat_id)
 
     while await db.get_db_data(chat_id, 'schedule_auto_send'):
-        await send_schedule(chat_id)  # start
-        await asyncio.sleep(
-            schedule_auto_send_delay * 60)  # задержка сканирования
+        if await schedule_time_filter():
+            await send_schedule(chat_id)
+
+        await asyncio.sleep(schedule_auto_send_delay * 60)
 
 
-async def send_schedule(chat_id: int, now: int = 0):
+async def send_schedule(chat_id: int, now: int = 0, day: int = None):
     custom_logger.debug(chat_id, f'<y> now: <r>{now}</></>')
-
-    settings = await db.get_db_data(
-        chat_id, 'school_class', 'school_change', 'last_check_schedule',
-        'last_print_time', 'last_print_time_hour',
-        'last_print_time_day', 'prev_schedule', 'last_printed_change_time'
-    )
-
-    # save settings from db
-    school_class, school_change, last_check_schedule, \
-        last_print_time, last_print_time_hour, \
-        last_print_time_day, prev_schedule, last_printed_change_time = settings
-
-    datetime_pattern = r'\d{2}\.\d{2}\.\d{4}\. (\d{2}:\d{2}:\d{2})'
     local_date = datetime.now(local_timezone)
+    logic = ScheduleLogic(chat_id)
+    should_send = await logic.should_send()
+    schedule_day = await logic.schedule_day()
 
-    # Цикл для избежания ошибок из-за недоступности сайта
-    while True:
+    # get schedule
+    schedule = await update_schedule_from_site(chat_id)
+    if not schedule:
+        return
+
+    # if argument day is not empty
+    if isinstance(day, int):
+        schedule_day = day
+
+    if should_send or now:
+        last_print_time = local_date.strftime('%d.%m.%Y. %H:%M:%S')
+        # get time change schedule on site
+        change_time = await db.get_db_data(chat_id, 'schedule_change_time')
+        last_printed_change_time = change_time
+
+        formatted_schedule = await format_schedule(schedule, schedule_day)
+        prev_schedule_json = formatted_schedule.to_json()
+
+        await generate_schedule_image(chat_id, formatted_schedule)
+        await del_old_schedule(chat_id)
+
         try:
-            cls = school_class
-            chng = school_change
-            site = f"https://lyceum.tom.ru/raspsp/index.php?k={cls}&s={chng}"
-            schedule = pd.read_html(site,
-                                    keep_default_na=True,
-                                    encoding="cp1251"
-                                    )  # ptcp154, also work
-            last_check_schedule = local_date.strftime('%d.%m.%Y %H:%M:%S')
-            break
+            txt = await schedule_msg_txt(schedule_day, last_printed_change_time)
+            schedule_img = FSInputFile("bot/data/schedule.png")
 
-        except URLError:
-            custom_logger.critical('site unreachable')
-            await asyncio.sleep(schedule_auto_send_delay * 60)
+            schedule_msg = await bot.send_photo(chat_id, caption=txt,
+                                                photo=schedule_img)
 
         except Exception as e:
-            custom_logger.critical(f'Site parse error:\n{e}')
-            await asyncio.sleep(schedule_auto_send_delay * 60)
+            msg = f'<y>Schedule image to bot sending error: <r>{e}</></>'
+            custom_logger.error(chat_id, msg)
+            await bot.send_message(chat_id, 'Ошибка отправки расписания')
+            await asyncio.sleep(60)
+            return
 
-    # получаем время последнего изменения расписания
-    schedule_change_time = re.search(datetime_pattern,
-                                     schedule[3][0][0]).group()
+        await pin_schedule(chat_id, schedule_msg.message_id)
 
-    # получаем schedule в виде json
-    formatted_schedule = await format_schedule(schedule, local_date.weekday())
-    schedule_json = formatted_schedule.to_json()
+        data = {'last_schedule_message_id': schedule_msg.message_id}
+        await db.update_db_data(chat_id, **data)
 
-    # Функция определяет, будет ли выполняться отправка расписания и если да, то на какой день недели
-    # Функция возвращает лист, например [0, 0]. Первая цифра отвечает за то, будет ли выполняться отправка,
-    # вторая за то в какой день она будет выполняться
-    def send_logic(schedule_change_time, last_printed_change_time,
-                   prev_schedule, last_print_time_day, last_print_time_hour,
-                   schedule_json):
-        # создаем переменные для часа и дня недели
-        hour = local_date.hour
-        weekday = local_date.weekday()
-
-        # изменилось ли расписание на сайте
-        site_schedule_change = now == 1 or last_printed_change_time != schedule_change_time
-
-        # изменилось ли расписание текущего дня
-        # либо если last_print_time_day (== первый запуск)
-        printed_schedule_change = now == 1 or (
-                    prev_schedule != schedule_json) and (
-                                              last_print_time_day == local_date.day)
-
-        # сейчас не ((суббота и больше 9) или (воскресенье и меньше 20))
-        weekend_condition = not ((int(weekday) == 5 and int(hour) > 9) or (
-                    int(weekday) == 6 and int(hour) < 20))
-
-        # Не печаталось на завтра
-        print_to_tomorrow = last_print_time_day != local_date.day or last_print_time_hour < 15
-
-        if site_schedule_change:  # расписание изменилось на сайте
-            if weekend_condition:  # сейчас не ((суббота и больше 9) или (воскресенье и меньше 20))
-                if printed_schedule_change:  # Расписание изменилось на сегодняшний день
-                    if hour < 15:
-                        custom_logger.debug(chat_id,
-                                            '<y>send logic condition: <r>1</></>')
-                        result = [1,
-                                  0]  # если оно изменилось, и сейчас меньше 15, то обновляем
-                    else:
-                        custom_logger.debug(chat_id,
-                                            '<y>send logic condition: <r>2</></>')
-                        result = [1,
-                                  1]  # если сейчас больше 15, то отправляем на завтра
-                else:
-                    custom_logger.debug(chat_id,
-                                        '<y>send logic condition: <r>3</></>')
-                    result = [0,
-                              1]  # если не изменилось, то отправляем на завтра
-            else:
-                custom_logger.debug(chat_id,
-                                    '<y>send logic condition: <r>4</></>')
-                result = [0, 0]  # то не отправляем
-        else:
-            if print_to_tomorrow:  # если не печаталось на завтра
-                if hour > 20 and weekend_condition:  # если больше 20
-                    custom_logger.debug(chat_id,
-                                        '<y>send logic condition: <r>5</></>')
-                    result = [1, 1]  # то отправляем на завтра
-                else:
-                    custom_logger.debug(chat_id,
-                                        '<y>send logic condition: <r>6</></>')
-                    result = [0, 0]  # то не отправляем
-            else:
-                custom_logger.debug(chat_id,
-                                    '<y>send logic condition: <r>7</></>')
-                result = [0, 0]  # то не отправляем
-
-        # меняем воскресенье после 20 на понедельник
-        day = (local_date.weekday() + result[1])
-
-        result[1] = day if day not in [6, 7] else 0
-
-        return result
-
-    # send_logic
-    send_logic_res = send_logic(schedule_change_time,
-                                last_printed_change_time, prev_schedule,
-                                last_print_time_day, last_print_time_hour,
-                                schedule_json)
-    msg = f'<y>send logic res: {send_logic_res}, now: <r>{now}</></>'
-    custom_logger.error(chat_id, msg)
-
-    # Отправляем расписание если send_logic_res[0] == 1
-    if send_logic_res[0] or now:
-        # Удаление предыдущего расписания
-        await del_msg_by_db_name(chat_id, 'last_schedule_message_id')
-
-        # обновляем время последнего отправленного расписания
-        last_print_time = local_date.strftime('%d.%m.%Y. %H:%M:%S')
-
-        # время изменения на сайте, последнего напечатанного расписания
-        last_printed_change_time = schedule_change_time
-
-        # определяем нужный день для отправки расписания
-        schedule_day = send_logic_res[1]
-
-        # Получаем форматированную таблицу с расписанием
-        formatted_schedule = await format_schedule(schedule, schedule_day)
-
-        # сохраняем последнее напечатанное расписание в json
-        prev_schedule = formatted_schedule.to_json()
-
-        # генерируем изображение в папку temp
-        await generate_image(chat_id, formatted_schedule)
-        while True:
-            try:
-                text = (f'{await text_day_of_week(schedule_day)} - последние '
-                        f'изменение: [{last_printed_change_time}]\n\n')
-
-                # Отправляем фотографию
-                schedule_img = FSInputFile("bot/data/schedule.png")
-                schedule_msg = await bot.send_photo(chat_id, caption=text,
-                                                    photo=schedule_img)
-
-                if await db.get_db_data(chat_id, 'pin_schedule_message'):
-                    # Закрепляем сообщение
-                    await bot.pin_chat_message(chat_id=chat_id,
-                                               message_id=schedule_msg.message_id)
-                    # delete service message "bot pinned message"
-                    await del_msg_by_id(chat_id, schedule_msg.message_id + 1)
-                    custom_logger.error(chat_id,
-                                        f'<y>now: <r>{now}, </>printed</>')
-
-                last_print_time_day = local_date.day
-                last_print_time_hour = local_date.hour
-
-                await db.update_db_data(chat_id,
-                                        last_schedule_message_id=schedule_msg.message_id)
-
-                break
-
-            except Exception as e:
-                msg = f'<y>Schedule image to bot sending error: <r>{e}</></>'
-                custom_logger.error(chat_id, msg)
-                await asyncio.sleep(60)
-                continue
-
-    await db.update_db_data(chat_id,
-                            last_print_time=last_print_time,
-                            last_printed_change_time=last_printed_change_time,
-                            last_check_schedule=last_check_schedule,
-                            prev_schedule=prev_schedule,
-                            last_print_time_day=last_print_time_day,
-                            last_print_time_hour=last_print_time_hour
-                            )
+    if should_send:
+        data = {
+            'last_print_time_day': local_date.day,
+            'last_print_time_hour': local_date.hour,
+            'last_print_time': last_print_time,
+            'last_printed_change_time': last_printed_change_time,
+            'prev_schedule_json': prev_schedule_json
+        }
+    await db.update_db_data(chat_id, **data)
     await send_status(chat_id)
 
 
-async def text_day_of_week(schedule_day) -> str:
+async def schedule_msg_txt(schedule_day, last_printed_change_time) -> str:
     day = {0: 'Понедельник',
            1: 'Вторник',
            2: 'Среда',
@@ -232,11 +103,14 @@ async def text_day_of_week(schedule_day) -> str:
            4: 'Пятница',
            5: 'Суббота'
            }[schedule_day]
-    return day
+
+    msg = f'{day} - последние изменение: [{last_printed_change_time}]\n\n'
+
+    return msg
 
 
 # генерация изображения
-async def generate_image(chat_id, formatted_schedule):
+async def generate_schedule_image(chat_id, formatted_schedule):
     # Задаем ширину строки
     column_widths = [
         max(formatted_schedule[col].astype(str).apply(len).max() + 1,
@@ -321,3 +195,82 @@ async def turn_schedule(callback_query: CallbackQuery) -> None:
         await send_status(chat_id, text=txt, reply_markup=None)
         await send_schedule(chat_id, now=1)
         await run_task_if_disabled(chat_id, 'schedule_auto_send')
+
+
+async def update_schedule_from_site(chat_id) -> list:
+    local_date = datetime.now(local_timezone)
+    cls = await db.get_db_data(chat_id, 'school_class')
+    chng = await db.get_db_data(chat_id, 'school_change')
+    site = f"https://lyceum.tom.ru/raspsp/index.php?k={cls}&s={chng}"
+
+    try:
+        # get schedule. ptcp154 encoding work too
+        schedule = pd.read_html(site, encoding="cp1251")
+
+    except Exception as e:
+        custom_logger.error(chat_id, f'<y>site unreachable, error:<r>{e}</></>')
+        await asyncio.sleep(schedule_auto_send_delay * 60)
+        await bot.send_message(chat_id=chat_id,
+                               text='Сайт недоступен',
+                               disable_notification=True)
+        return []
+
+    # update check time
+    last_check_schedule = datetime.now().strftime('%d.%m.%Y %H:%M:%S')
+    # update schedule_change_time
+    time_pattern = r'\d{2}\.\d{2}\.\d{4}\. (\d{2}:\d{2}:\d{2})'
+    schedule_change_time = re.search(time_pattern, schedule[3][0][0]).group()
+    # creat json with formatted schedule
+    formatted_schedule = await format_schedule(schedule, local_date.weekday())
+    schedule_json = formatted_schedule.to_json()
+
+    data = {
+        'last_check_schedule': last_check_schedule,
+        'schedule_json': schedule_json,
+        'schedule_change_time': schedule_change_time,
+    }
+    await db.update_db_data(chat_id, **data)
+
+    return schedule
+
+
+async def del_old_schedule(chat_id) -> None:
+    """ if user have enabled 'del_old_schedule' delete previous schedule """
+    del_parameter = await db.get_db_data(chat_id, 'del_old_schedule')
+
+    if del_parameter:
+        await del_msg_by_db_name(chat_id, 'last_schedule_message_id')
+
+
+async def schedule_for_day(callback_query: CallbackQuery) -> None:
+    chat_id = callback_query.message.chat.id
+    custom_logger.debug(chat_id)
+
+    if callback_query.data == 'schedule_for_day_menu':
+        await send_status(chat_id, reply_markup=kb.schedule_for_day())
+
+    else:
+        callback_prefix = 'schedule_for_day_'
+        day = int(callback_query.data[len(callback_prefix):])
+        await send_schedule(chat_id, now=1, day=day)
+
+
+async def pin_schedule(chat_id, schedule_msg_id) -> None:
+    """ pin schedule msg if the user has enabled this feature """
+    if await db.get_db_data(chat_id, 'pin_schedule_message'):
+        await bot.pin_chat_message(chat_id, schedule_msg_id)
+        await del_msg_by_id(chat_id, schedule_msg_id + 1)
+
+
+async def schedule_time_filter() -> bool:
+    local_date = datetime.now(local_timezone)
+    hour = local_date.hour
+    month = local_date.month
+
+    if hour < 6:
+        return False
+
+    if month in [6, 7, 8]:
+        return False
+
+    return True

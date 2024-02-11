@@ -21,17 +21,20 @@ class DatabaseClass:
         bot_enabled INTEGER DEFAULT 1 NOT NULL,
         school_class TEXT DEFAULT 'b11',
         school_change INTEGER DEFAULT 1,
+        schedule_json TEXT DEFAULT '',
+        del_old_schedule INTEGER DEFAULT 1,
         pin_schedule_message INTEGER DEFAULT 1,
         last_status_message_id INTEGER DEFAULT 0,
         last_schedule_message_id INTEGER DEFAULT 0,
         last_settings_message_id INTEGER DEFAULT 0,
+        schedule_change_time TEXT DEFAULT '',
         last_user_activity_time TEXT DEFAULT '',
         last_print_time TEXT DEFAULT 'еще не проверялось',
         last_printed_change_time TEXT DEFAULT 'еще не проверялось',
         last_check_schedule TEXT DEFAULT 'еще не проверялось',
         last_print_time_day INTEGER DEFAULT 0,
         last_print_time_hour INTEGER DEFAULT 0,
-        prev_schedule TEXT DEFAULT '',
+        prev_schedule_json TEXT DEFAULT '',
         schedule_bg_color TEXT DEFAULT '255,255,143'
         )
         ''')
@@ -116,34 +119,6 @@ class DatabaseClass:
         msg_id = await self.get_db_data(chat_id, 'last_status_message_id')
 
         return msg_id
-
-    async def get_logic_settings(self, chat_id: int) -> tuple:
-        custom_logger.debug(chat_id)
-        settings = (
-            'school_class', 'school_change', 'last_check_schedule',
-            'last_print_time', 'last_print_time_hour',
-            'last_print_time_day', 'prev_schedule', 'last_printed_change_time'
-        )
-
-        self.cursor.execute(f'''
-        SELECT {", ".join(settings)}
-        FROM user_data
-        WHERE chat_id = {chat_id}
-    ''')
-
-        settings_list: list = self.cursor.fetchall()
-        # if data is empty, user not exists in db, add user_id to db
-        if not len(settings_list):
-            custom_logger.critical(chat_id, '<c>not exist in bd</>')
-
-            from bot.utils.status import send_status
-            await self.add_new_chat_id(chat_id)
-            await send_status(chat_id, edit=1)
-            return await self.get_logic_settings(chat_id)
-
-        settings_tuple: tuple = settings_list[0]
-
-        return settings_tuple
 
 
 db = DatabaseClass('bot/database/bot_data.db')

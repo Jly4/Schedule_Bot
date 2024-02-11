@@ -4,4 +4,3 @@ bot/data/*.png
 *.zip
 *.db
 .env
-

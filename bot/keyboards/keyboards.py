@@ -3,16 +3,33 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from bot.config.config_loader import classes_dict
 
+
 def main() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-
     buttons: dict = {
-        'update_schedule': 'Получить расписание',
+        'schedule_for_day_menu': 'Выбрать день',
         'settings': 'Настройки'
     }
 
     for callback, text in buttons.items():
         kb.button(text=text, callback_data=callback).adjust(2)
+
+    return kb.as_markup()
+
+
+def schedule_for_day() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    buttons = {
+        'schedule_for_day_0': 'Понедельник',
+        'schedule_for_day_1': 'Вторник',
+        'schedule_for_day_2': 'Среда',
+        'schedule_for_day_3': 'Четверг',
+        'schedule_for_day_4': 'Пятница',
+        'schedule_for_day_5': 'Суббота',
+        'status': 'Назад'
+    }
+    for callback, text in buttons.items():
+        kb.button(text=text, callback_data=callback).adjust(3)
 
     return kb.as_markup()
 
@@ -86,7 +103,6 @@ def choose_class_letter(class_number) -> InlineKeyboardMarkup:
 
 
 def description() -> InlineKeyboardMarkup:
-
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text='@yosqe', url="https://t.me/Yosqe"),

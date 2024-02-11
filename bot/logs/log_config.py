@@ -77,13 +77,15 @@ def loguru_config():
 
 
 class CustomLogger:
-    def opt_args(self, exception: bool = False, depth: int = 1) -> dict:
+    @staticmethod
+    def opt_args(exception: bool = False, depth: int = 1) -> dict:
         if exception:
             return {"colors": True, "depth": depth, "exception": True}
         else:
             return {"colors": True, "depth": depth}
 
-    def add_chat_id(self, chat_id: int, msg: str) -> str:
+    @staticmethod
+    def add_chat_id(chat_id: int, msg: str) -> str:
         if not msg:
             msg = '<y>started</>'
 
@@ -92,23 +94,28 @@ class CustomLogger:
 
     def debug(self, chat_id: int, msg: str = '', **kwargs) -> None:
         logger.opt(**self.opt_args(**kwargs)).debug(self.add_chat_id(
-            chat_id, msg))
+            chat_id, msg
+        ))
 
     def info(self, chat_id: int, msg: str = '', **kwargs) -> None:
         logger.opt(**self.opt_args(**kwargs)).info(self.add_chat_id(
-            chat_id, msg))
+            chat_id, msg
+        ))
 
     def warning(self, chat_id: int, msg: str = '', **kwargs) -> None:
         logger.opt(**self.opt_args(**kwargs)).warning(self.add_chat_id(
-            chat_id, msg))
+            chat_id, msg
+        ))
 
     def error(self, chat_id: int, msg: str = '', **kwargs) -> None:
         logger.opt(**self.opt_args(**kwargs)).error(self.add_chat_id(
-            chat_id, msg))
+            chat_id, msg
+        ))
 
     def critical(self, chat_id: int = '', msg: str = '', **kwargs) -> None:
         logger.opt(**self.opt_args(**kwargs)).critical(self.add_chat_id(
-            chat_id, msg))
+            chat_id, msg)
+        )
 
 
 custom_logger = CustomLogger()

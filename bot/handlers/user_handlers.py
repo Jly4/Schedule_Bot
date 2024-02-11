@@ -3,7 +3,7 @@ from aiogram.filters import Command
 
 from bot.utils.status import send_status
 from bot.utils.utils import status_command
-from bot.utils.schedule import send_schedule
+from bot.utils.schedule import schedule_for_day
 
 router = Router()
 
@@ -18,7 +18,10 @@ async def status_call(callback_query: types.CallbackQuery) -> None:
     await send_status(callback_query.message.chat.id)
 
 
-@router.callback_query(F.data == 'update_schedule')
+@router.callback_query(F.data.startswith('schedule_for_day_'))
 async def update_schedule_call(callback_query: types.CallbackQuery) -> None:
-    await send_schedule(callback_query.message.chat.id, now=1)
+    await schedule_for_day(callback_query)
+
+
+
 

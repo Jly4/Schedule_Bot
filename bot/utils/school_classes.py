@@ -26,7 +26,8 @@ async def set_class_number(callback_query: CallbackQuery) -> None:
                       text=msg,
                       reply_markup=kb.choose_class_letter(school_class))
 
-
+from loguru import logger
+@logger.catch
 async def set_class(callback_query: CallbackQuery) -> None:
     chat_id = callback_query.message.chat.id
     prefix = 'set_class_'  # callback prefix

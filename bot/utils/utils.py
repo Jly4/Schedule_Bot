@@ -87,16 +87,17 @@ async def start_command(message: Message) -> None:
 
     if chat_id not in user_id_list:  # check chat_id in db
         await db.add_new_chat_id(chat_id)  # add chat_id to db
+        msg = 'Выберите цифру класса'
+        await send_status(chat_id, msg, edit=0,
+                          reply_markup=kb.choose_class_num())
 
-    await db.update_db_data(chat_id, schedule_auto_send=0, bot_enabled=1)
-    await del_msg_by_db_name(chat_id, 'last_status_message_id')
-
-    msg = 'Выберите цифру класса'
-    await send_status(chat_id, msg, edit=0, reply_markup=kb.choose_class_num())
+    else:
+        await db.update_db_data(chat_id, schedule_auto_send=0, bot_enabled=1)
+        await del_msg_by_db_name(chat_id, 'last_status_message_id')
+        await send_status(chat_id, edit=1, reply_markup=kb.settings())
 
     await asyncio.sleep(1)
     await del_msg_by_id(chat_id, message.message_id, 'start command')
-    await send_status(chat_id, edit=1, reply_markup=kb.settings())
 
 
 async def status_command(message: Message) -> None:

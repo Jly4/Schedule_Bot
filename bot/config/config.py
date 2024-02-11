@@ -3,7 +3,7 @@
 # token=___
 
 # Auto send delay in min
-schedule_auto_send_delay: float = 10
+schedule_auto_send_delay: float = 15
 
 # The following parameter sets logging level:
 # ['AIOGRAM_DEBUG', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']

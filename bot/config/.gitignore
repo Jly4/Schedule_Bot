@@ -1,6 +1,0 @@
-.idea/
-bot/logs/*.log
-bot/logs/*.zip
-*.db
-.env
-
