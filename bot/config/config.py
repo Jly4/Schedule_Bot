@@ -1,6 +1,15 @@
-# Bot token
+import os
+
+from dotenv import load_dotenv
+
+load_dotenv()
+token = os.getenv("token")
+
 # Put your token in the /bot/config/.env file as follows:
-# token=___
+if token is None:
+    raise Exception("token not exist in .env"
+                    "check where you place .env it must be in"
+                    "/bot/config/.env")
 
 # Auto send delay in min
 schedule_auto_send_delay: float = 15

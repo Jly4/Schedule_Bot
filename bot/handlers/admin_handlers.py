@@ -7,8 +7,8 @@ from bot.utils.status import send_status
 from bot.filters.filters import IsAdmin
 from bot.utils.colors import color_set_menu, set_schedule_bg_color
 from bot.utils.utils import settings, del_msg_by_id, start_command
-from bot.utils.utils import bot_enabled_for_chat, disable_bot
-from bot.utils.schedule import turn_schedule_pin, turn_schedule
+from bot.utils.utils import disable_bot
+from bot.utils.schedule import turn_schedule_pin, turn_schedule, turn_deleting
 from bot.utils.school_classes import choose_class, set_class_number, set_class
 
 router = Router()
@@ -29,10 +29,8 @@ async def start_msg(message: types.Message) -> None:
 
 @router.message(Command('disable'))
 async def disable_bot_msg(message: types.Message) -> None:
-    chat_id: int = message.chat.id
-    if await bot_enabled_for_chat(chat_id):
-        await del_msg_by_id(chat_id, message.message_id, 'disable command')
-        await disable_bot(message)  # start disable bot func
+    await del_msg_by_id(message.chat.id, message.message_id, 'disable command')
+    await disable_bot(message)  # start disable bot func
 
 
 """ color handlers
@@ -77,6 +75,12 @@ async def turn_pin_schedule_call(callback_query: types.CallbackQuery) -> None:
     await turn_schedule_pin(callback_query)
 
 
+@router.callback_query(F.data == 'schedule_auto_delete')
+async def turn_deleting_call(callback_query: types.CallbackQuery) -> \
+        None:
+    await turn_deleting(callback_query)
+
+
 """ disable bot and description handlers
 """
 
@@ -99,7 +103,7 @@ async def description_call(callback_query: types.CallbackQuery) -> None:
 
 @router.callback_query(F.data == 'choose_class')
 async def choose_class_call(callback_query: types.CallbackQuery) -> None:
-    await choose_class(callback_query)
+    await choose_class(callback_query.message.chat.id)
 
 
 @router.callback_query(F.data.startswith('class_number_'))

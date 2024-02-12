@@ -24,7 +24,7 @@ class DatabaseClass:
         schedule_json TEXT DEFAULT '',
         del_old_schedule INTEGER DEFAULT 1,
         pin_schedule_message INTEGER DEFAULT 1,
-        last_status_message_id INTEGER DEFAULT 0,
+        last_status_message_id INTEGER DEFAULT 1,
         last_schedule_message_id INTEGER DEFAULT 0,
         last_settings_message_id INTEGER DEFAULT 0,
         schedule_change_time TEXT DEFAULT '',
@@ -51,7 +51,7 @@ class DatabaseClass:
         self.connection.commit()
 
     async def add_new_chat_id(self, chat_id: int) -> None:
-        custom_logger.debug(chat_id, '<c>new chat_id</>')
+        custom_logger.debug(chat_id, '<c>new chat_id</>', depth=2)
 
         self.cursor.execute('INSERT INTO user_data (chat_id) '
                             'VALUES (?)', (chat_id,))
@@ -59,7 +59,7 @@ class DatabaseClass:
         self.connection.commit()  # save db
 
     async def get_db_data(self, chat_id: int, *args: str) -> Union[tuple, int]:
-        custom_logger.debug(chat_id, f'get_db_data: <c>{args}</>')
+        custom_logger.debug(chat_id, f'get_db_data: <c>{args}</>', depth=2)
 
         self.cursor.execute(f'''
             SELECT {", ".join(args)}
@@ -71,18 +71,29 @@ class DatabaseClass:
         # if data is empty, user not exists in db, add user_id to db
         if not len(data_list):
             custom_logger.critical(chat_id, '<c>not exist in bd</>')
+            await self.user_not_exist(chat_id, args)
+            return 0
 
-            from bot.utils.status import send_status
-            await self.add_new_chat_id(chat_id)
-            await send_status(chat_id, edit=1)
-            return await self.get_db_data(chat_id, *args)
-
-        data_tuple: tuple = data_list[0]
-        # if only one value, unpack it from tuple
-        if len(data_tuple) > 1:
-            return data_tuple
         else:
-            return data_tuple[0]
+            data_tuple: tuple = data_list[0]
+            # if only one value, unpack it from tuple
+            if len(data_tuple) > 1:
+                return data_tuple
+            else:
+                return data_tuple[0]
+
+    async def user_not_exist(self, chat_id: int, args: object) -> None:
+        """ If this func has been called from activity check -> return
+            if it was called from user
+            which not exists in db -> send keyboard
+        """
+        if 'bot_enabled' in args:
+            return
+
+        else:
+            from bot.utils.school_classes import choose_class
+            await self.add_new_chat_id(chat_id)
+            await choose_class(chat_id)
 
     async def update_db_data(self, chat_id: int, **kwargs) -> None:
         custom_logger.debug(chat_id, f'update_db_data: <c>{kwargs.keys()}</>')
@@ -106,7 +117,7 @@ class DatabaseClass:
         return user_id_list
 
     async def delete_chat_id(self, chat_id: int) -> None:
-        custom_logger.info(chat_id, '<r>Deleted from db</>')
+        custom_logger.info(chat_id, '<r>deleting from db</>', depth=2)
 
         self.cursor.execute(f'''
         DELETE FROM user_data
@@ -116,6 +127,8 @@ class DatabaseClass:
         self.connection.commit()
 
     async def get_status_msg_id(self, chat_id: int) -> int:
+        custom_logger.debug(chat_id, depth=2)
+
         msg_id = await self.get_db_data(chat_id, 'last_status_message_id')
 
         return msg_id

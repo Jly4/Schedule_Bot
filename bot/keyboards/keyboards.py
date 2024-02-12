@@ -1,13 +1,13 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from bot.config.config_loader import classes_dict
+from bot.config.config import classes_dict
 
 
 def main() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     buttons: dict = {
-        'schedule_for_day_menu': 'Выбрать день',
+        'schedule_for_day_menu': 'Расписание',
         'settings': 'Настройки'
     }
 
@@ -43,6 +43,7 @@ def settings() -> InlineKeyboardMarkup:
         'pin_schedule': 'Закреплять расписание',
         'color_menu': 'Цвет фона расписания',
         'disable_bot': 'Отключить бота',
+        'schedule_auto_delete': 'Удаление расписания',
         'description': 'Информация о боте',
         'status': 'Закрыть настройки'
     }

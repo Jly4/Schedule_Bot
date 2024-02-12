@@ -1,3 +1,4 @@
+import os
 import pytz
 from datetime import datetime
 
@@ -10,6 +11,18 @@ local_timezone = pytz.timezone('Asia/Tomsk')
 class ScheduleLogic:
     def __init__(self, chat_id: int):
         self.chat_id = chat_id
+
+    async def should_regen_img(self, image_path_name: str) -> bool:
+        """ if schedule should be regenerated
+        1. if schedule_img doesn't exist
+        2. if schedule on site was updated
+        """
+        schedule_exist = os.path.exists(image_path_name)
+
+        if not schedule_exist or await self.schedule_changed():
+            return True
+
+        return False
 
     async def schedule_day(self) -> int:
         custom_logger.debug(self.chat_id)

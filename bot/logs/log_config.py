@@ -3,8 +3,7 @@ import logging
 
 from loguru import logger
 
-from bot.config.config_loader import console_log_level, \
-    schedule_auto_send_delay
+from bot.config.config import console_log_level, schedule_auto_send_delay
 
 
 class InterceptHandler(logging.Handler):
@@ -92,27 +91,27 @@ class CustomLogger:
         log = f"""<y>chat_id: <r>{f"{chat_id}".rjust(15)} | </></>{msg}"""
         return log
 
-    def debug(self, chat_id: int, msg: str = '', **kwargs) -> None:
+    def debug(self, chat_id: int = None, msg: str = '', **kwargs) -> None:
         logger.opt(**self.opt_args(**kwargs)).debug(self.add_chat_id(
             chat_id, msg
         ))
 
-    def info(self, chat_id: int, msg: str = '', **kwargs) -> None:
+    def info(self, chat_id: int = None, msg: str = '', **kwargs) -> None:
         logger.opt(**self.opt_args(**kwargs)).info(self.add_chat_id(
             chat_id, msg
         ))
 
-    def warning(self, chat_id: int, msg: str = '', **kwargs) -> None:
+    def warning(self, chat_id: int = None, msg: str = '', **kwargs) -> None:
         logger.opt(**self.opt_args(**kwargs)).warning(self.add_chat_id(
             chat_id, msg
         ))
 
-    def error(self, chat_id: int, msg: str = '', **kwargs) -> None:
+    def error(self, chat_id: int = None, msg: str = '', **kwargs) -> None:
         logger.opt(**self.opt_args(**kwargs)).error(self.add_chat_id(
             chat_id, msg
         ))
 
-    def critical(self, chat_id: int = '', msg: str = '', **kwargs) -> None:
+    def critical(self, chat_id: int = None, msg: str = '', **kwargs) -> None:
         logger.opt(**self.opt_args(**kwargs)).critical(self.add_chat_id(
             chat_id, msg)
         )

@@ -3,7 +3,7 @@ import asyncio
 from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
 
-from bot.config.config_loader import token
+from bot.config.config import token
 
 
 bot = Bot(token=token, parse_mode=ParseMode.HTML)

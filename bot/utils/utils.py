@@ -1,3 +1,5 @@
+import os
+import time
 import asyncio
 
 from typing import Union
@@ -22,31 +24,35 @@ async def run_bot_tasks():
         return
 
     for chat_id in chat_id_list:
-        bot_enabled = await db.get_db_data(chat_id, 'bot_enabled')
-        if not bot_enabled:
-            return
-
-        active_user = await user_is_active(chat_id)
-        if not active_user:
-            await db.delete_chat_id(chat_id)
-            continue
-
         from bot.utils.status import send_status
         await send_status(chat_id)
+        # if user have disabled bot
+        bot_enabled = await db.get_db_data(chat_id, 'bot_enabled')
+        if not bot_enabled:
+            custom_logger.info(chat_id, "<y>user was disable bot</>")
+            return
 
-        await run_task_if_disabled(chat_id, 'schedule_auto_send')
+        # if user hasn't received schedule for 90 last days
+        user_active = await user_is_active(chat_id)
+        if user_active:
+            await run_task_if_disabled(chat_id, 'schedule_auto_send')
+        else:
+            await db.delete_chat_id(chat_id)
 
 
 async def user_is_active(chat_id: int) -> bool:
+    """ true if the user was received a schedule for the last 90 days """
     active_time = await db.get_db_data(chat_id, 'last_print_time')
     if active_time == 'еще не проверялось':
         return True
 
     datetime_format = datetime.strptime(active_time, '%d.%m.%Y. %H:%M:%S')
     difference = datetime.now() - datetime_format
+
     if difference.days > 90:
         custom_logger.info(chat_id, '<r>User was inactive in last 90days</>')
         return False
+    custom_logger.debug(chat_id, 'user is active')
     return True
 
 
@@ -74,10 +80,7 @@ async def disable_bot(query: Union[CallbackQuery, Message]) -> None:
     await del_msg_by_db_name(chat_id, 'last_schedule_message_id')
     await del_msg_by_db_name(chat_id, 'last_status_message_id')
 
-    await db.update_db_data(chat_id,
-                            schedule_auto_send=0,
-                            bot_enabled=0,
-                            last_status_message_id=0)
+    await db.update_db_data(chat_id, bot_enabled=0)
 
 
 async def start_command(message: Message) -> None:
@@ -92,9 +95,9 @@ async def start_command(message: Message) -> None:
                           reply_markup=kb.choose_class_num())
 
     else:
-        await db.update_db_data(chat_id, schedule_auto_send=0, bot_enabled=1)
+        await db.update_db_data(chat_id, bot_enabled=1)
         await del_msg_by_db_name(chat_id, 'last_status_message_id')
-        await send_status(chat_id, edit=1, reply_markup=kb.settings())
+        await send_status(chat_id, edit=0, reply_markup=kb.main())
 
     await asyncio.sleep(1)
     await del_msg_by_id(chat_id, message.message_id, 'start command')
@@ -102,8 +105,9 @@ async def start_command(message: Message) -> None:
 
 async def status_command(message: Message) -> None:
     chat_id = message.chat.id
-    if not await bot_enabled_for_chat(chat_id):
+    if not await db.get_db_data(chat_id, 'bot_enabled'):
         return
+
     await send_status(chat_id, edit=0)
     await del_msg_by_id(chat_id, message.message_id, 'status command')
 
@@ -128,14 +132,15 @@ async def run_task_if_disabled(chat_id: int, task_name: str) -> None:
         custom_logger.error(chat_id, f'<y>Wrong task: <r>{task_name}</></>')
 
 
-async def bot_enabled_for_chat(chat_id: int) -> bool:
-    is_bot_enabled = await db.get_db_data(chat_id, 'bot_enabled')
+async def old_data_cleaner() -> None:
+    files = os.listdir('bot/data')
+    current_time = time.time()
 
-    if is_bot_enabled:
-        return True
-    else:
-        msg = 'bot отключен, отправьте /start для включения'
-        disable_msg = await bot.send_message(chat_id, msg)
+    for f in files:
+        file_modify_time = os.stat(f'bot/data/{f}').st_mtime
+        file_age = current_time - file_modify_time
 
-        await asyncio.sleep(3)
-        await bot.delete_message(chat_id, disable_msg)
+        if file_age > 3600 * 24 * 7:
+            os.remove(f'bot/data/{f}')
+            custom_logger.debug(msg=f'{file_age}')
+
