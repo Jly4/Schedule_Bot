@@ -7,12 +7,14 @@ import pandas as pd
 
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
-from aiogram.types import FSInputFile, CallbackQuery
+from aiogram.types import FSInputFile, CallbackQuery, Message
+from aiogram.exceptions import TelegramRetryAfter
 
 from main import bot
 from bot.utils.status import send_status
 from bot.database.database import db as db
 from bot.logs.log_config import custom_logger
+from bot.exceptions.exceptions import retry_after
 from bot.config.config import schedule_auto_send_delay
 from bot.utils.messages import del_msg_by_db_name, del_msg_by_id
 from bot.utils.utils import run_task_if_disabled, old_data_cleaner
@@ -38,7 +40,7 @@ async def schedule_auto_send(chat_id: int):
 
 
 async def send_schedule(chat_id: int, now: int = 0, day: int = None):
-    custom_logger.debug(chat_id, f'<y> now: <r>{now}</></>')
+    custom_logger.debug(chat_id, f'<y>now: <r>{now}</></>')
     local_date = datetime.now(local_timezone)
     logic = ScheduleLogic(chat_id)
     should_send = await logic.should_send()
@@ -52,6 +54,8 @@ async def send_schedule(chat_id: int, now: int = 0, day: int = None):
     # if argument day is not empty
     if isinstance(day, int):
         schedule_day = day
+    custom_logger.debug(chat_id, f'<y>schedule_day: <r>{schedule_day}</></>')
+    custom_logger.debug(chat_id, f'<y>should_send: <r>{should_send}</></>')
 
     if should_send or now:
         last_print_time = local_date.strftime('%d.%m.%Y. %H:%M:%S')
@@ -66,21 +70,9 @@ async def send_schedule(chat_id: int, now: int = 0, day: int = None):
         await generate_image(chat_id, formatted_schedule, image_path)
         await del_old_schedule(chat_id)
 
-        schedule_img = FSInputFile(image_path)
         txt = await schedule_msg_txt(schedule_day, last_printed_change_time)
-        try:
-            schedule_msg = await bot.send_photo(chat_id,
-                                                caption=txt,
-                                                photo=schedule_img)
-
-        except Exception as e:
-            msg = f'<y>Schedule image to bot sending error: <r>{e}</></>'
-            custom_logger.error(chat_id, msg)
-            await bot.send_message(chat_id, 'Ошибка отправки расписания')
-            await asyncio.sleep(60)
-            return
-
-        await pin_schedule(chat_id, schedule_msg.message_id)
+        schedule_img = FSInputFile(image_path)
+        schedule_msg = await send_schedule_image(chat_id, txt, schedule_img)
 
         data = {
             'last_schedule_message_id': schedule_msg.message_id,
@@ -98,6 +90,26 @@ async def send_schedule(chat_id: int, now: int = 0, day: int = None):
         await db.update_db_data(chat_id, **data)
     await asyncio.sleep(0.5)
     await send_status(chat_id)
+
+
+async def send_schedule_image(chat_id, txt, schedule_img) -> Message:
+    while True:
+        try:
+            schedule_msg = await bot.send_photo(chat_id,
+                                                caption=txt,
+                                                photo=schedule_img)
+
+            await pin_schedule(chat_id, schedule_msg.message_id)
+            return schedule_msg
+
+        except TelegramRetryAfter:
+            await retry_after(chat_id)
+
+        except Exception as e:
+            msg = f'<y>Schedule image to bot sending error: <r>{e}</></>'
+            custom_logger.critical(chat_id, msg)
+            await bot.send_message(chat_id, 'Ошибка отправки расписания')
+            await asyncio.sleep(60)
 
 
 async def schedule_msg_txt(schedule_day, last_printed_change_time) -> str:

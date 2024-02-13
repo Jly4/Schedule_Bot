@@ -1,14 +1,15 @@
+import asyncio
 from typing import Optional
 
 from aiogram.utils.keyboard import InlineKeyboardMarkup
-
-from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
+from aiogram import exceptions
 
 from main import bot
 from bot.database.database import db
 from bot.keyboards import keyboards as kb
-from bot.logs.log_config import custom_logger
 from bot.config.config import classes_dict
+from bot.logs.log_config import custom_logger
+from bot.exceptions.exceptions import retry_after
 from bot.utils.messages import del_msg_by_db_name, clear_chat
 
 
@@ -50,14 +51,14 @@ async def edit_status(args) -> None:
 
         custom_logger.debug(chat_id, '<y>successful edited</>')
 
-    except TelegramForbiddenError as e:
+    except exceptions.TelegramForbiddenError as e:
         msg = (f'<y>Bot was kicked or blocked, deleting '
                f'chat_id from bd: <r>{e}</></>')
         custom_logger.error(chat_id, msg)
 
         await db.delete_chat_id(chat_id)  # delete chat_id from db
 
-    except TelegramBadRequest as e:
+    except exceptions.TelegramBadRequest as e:
         if "exactly the same as a current content" in str(e):
             custom_logger.error(chat_id, '<y>message have same content</>')
             return
@@ -91,12 +92,15 @@ async def resend_status(args: dict, clean: int = 0) -> None:
         if clean:
             await clear_chat(chat_id)
 
-    except TelegramForbiddenError as e:
+    except exceptions.TelegramForbiddenError as e:
         msg = (f'<y>Bot was kicked or blocked, '
                f'deleting chat_id from bd: <r>{e}</></>')
         custom_logger.info(chat_id, msg)
 
         await db.delete_chat_id(chat_id)  # delete chat_id from db
+
+    except exceptions.TelegramRetryAfter:
+        await retry_after(chat_id)
 
     except Exception as e:
         custom_logger.critical(chat_id, f'<y>edit status error: <r>{e}</></>')
