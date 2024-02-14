@@ -24,11 +24,14 @@ async def color_set_menu(callback_query: CallbackQuery):
             'Выбрать цвет в формате RGB можно '
             '[тут](https://www.google.com/search?q=rgb+color+picker).\n')
 
-    await bot.edit_message_text(chat_id=chat_id, text=text,
-                                message_id=status_message_id,
-                                reply_markup=kb.choose_color(),
-                                disable_web_page_preview=True,
-                                parse_mode='MarkDown')
+    await bot.edit_message_text(
+        chat_id=chat_id,
+        text=text,
+        message_id=status_message_id,
+        reply_markup=kb.choose_color(),
+        disable_web_page_preview=True,
+        parse_mode='MarkDown'
+    )
 
 
 async def set_bg_color(query: Union[CallbackQuery, Message]) -> None:
@@ -50,9 +53,9 @@ async def set_bg_color(query: Union[CallbackQuery, Message]) -> None:
 
             await asyncio.sleep(1.5)
             await send_schedule(chat_id, now=1)
-
         else:
             msg = await bot.send_message(chat_id, 'Не правильный формат')
+
             await asyncio.sleep(2)
             await bot.delete_message(chat_id, msg.message_id)
 

@@ -120,7 +120,6 @@ class ScheduleLogic:
 
     async def printed_tomorrow(self) -> bool:
         """ returns True if today schedule was printed """
-
         local_date = datetime.now(local_timezone)
         tomorrow = local_date.day + 1
 

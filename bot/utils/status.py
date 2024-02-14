@@ -1,4 +1,3 @@
-import asyncio
 from typing import Optional
 
 from aiogram.utils.keyboard import InlineKeyboardMarkup

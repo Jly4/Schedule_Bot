@@ -12,7 +12,7 @@ from aiogram.exceptions import TelegramRetryAfter
 
 from main import bot
 from bot.utils.status import send_status
-from bot.database.database import db as db
+from bot.database.database import db
 from bot.logs.log_config import custom_logger
 from bot.exceptions.exceptions import retry_after
 from bot.config.config import schedule_auto_send_delay
