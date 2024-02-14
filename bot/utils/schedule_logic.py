@@ -19,7 +19,7 @@ class ScheduleLogic:
         """
         schedule_exist = os.path.exists(image_path_name)
 
-        if not schedule_exist or await self.schedule_changed():
+        if not schedule_exist or await self.time_changed():
             return True
 
         return False
@@ -63,13 +63,13 @@ class ScheduleLogic:
         local_date = datetime.now(local_timezone)
         hour = local_date.hour
 
-        if not await self.schedule_changed():
+        if not await self.time_changed():
             return False
 
         if hour > 15:
             return False
 
-        if not await self.printed_schedule_change():
+        if not await self.schedule_changed():
             return False
 
         return True
@@ -84,18 +84,18 @@ class ScheduleLogic:
         local_date = datetime.now(local_timezone)
         hour = local_date.hour
 
-        if not await self.schedule_changed():
+        if not await self.time_changed():
             return False
 
         if hour < 15:
             return False
 
-        if not await self.printed_schedule_change() and hour < 20:
+        if not await self.schedule_changed() and hour < 20:
             return False
 
         return True
 
-    async def printed_schedule_change(self) -> bool:
+    async def schedule_changed(self) -> bool:
         """ returns True if the last automatically printed schedule
             is different from the current one
         """
@@ -131,7 +131,7 @@ class ScheduleLogic:
             return True
         return False
 
-    async def schedule_changed(self) -> bool:
+    async def time_changed(self) -> bool:
         """ return True if time of change updated on site """
         data_name = ['schedule_change_time', 'last_printed_change_time']
         data = await db.get_db_data(self.chat_id, *data_name)

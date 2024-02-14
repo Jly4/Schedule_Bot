@@ -5,7 +5,7 @@ from bot.keyboards import keyboards as kb
 
 from bot.utils.status import send_status
 from bot.filters.filters import IsAdmin
-from bot.utils.colors import color_set_menu, set_schedule_bg_color
+from bot.utils.colors import color_set_menu, set_bg_color
 from bot.utils.utils import settings, del_msg_by_id, start_command
 from bot.utils.utils import disable_bot
 from bot.utils.schedule import turn_schedule_pin, turn_schedule, turn_deleting
@@ -44,12 +44,12 @@ async def color_set_menu_call(callback_query: types.CallbackQuery) -> None:
 
 @router.message(F.text.lower().startswith('set color '))
 async def set_color_msg(message: types.Message) -> None:
-    await set_schedule_bg_color(message)
+    await set_bg_color(message)
 
 
 @router.callback_query(F.data.startswith('set color '))
 async def set_color_call(callback_query: types.CallbackQuery) -> None:
-    await set_schedule_bg_color(callback_query)
+    await set_bg_color(callback_query)
 
 
 """ settings handlers

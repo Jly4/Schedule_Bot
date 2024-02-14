@@ -31,7 +31,7 @@ async def color_set_menu(callback_query: CallbackQuery):
                                 parse_mode='MarkDown')
 
 
-async def set_schedule_bg_color(query: Union[CallbackQuery, Message]) -> None:
+async def set_bg_color(query: Union[CallbackQuery, Message]) -> None:
     if isinstance(query, Message):
         """ receive color code from a message """
         chat_id = query.chat.id
