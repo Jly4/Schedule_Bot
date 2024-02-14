@@ -1,6 +1,15 @@
 # Schedule_Bot
 
+<img width="220" alt="schedule_bot_start" src="https://github.com/Jly4/Schedule_Bot/assets/65804380/bdb90d9a-e238-415a-83d4-a2d414e336a5">
+<img width="220" alt="schedule_bot_main" src="https://github.com/Jly4/Schedule_Bot/assets/65804380/bbae4a74-b429-4e7d-aed9-f51e2b7fad71">
+<img width="220" alt="schedule_bot_settings" src="https://github.com/Jly4/Schedule_Bot/assets/65804380/a0bc208b-aef9-4780-82f7-c493a134da4c">
+<img width="220" alt="schedule_bot_colors" src="https://github.com/Jly4/Schedule_Bot/assets/65804380/ff5cb55c-7e67-47b4-9a38-b386f85642e7">
+
+
+
 *Current Status*: 2.0.0-beta
+
+*Telegram Tag*: @gsl_schedule_bot
 
 *Schedule_Bot* -
 Bot for the receipt of the lessons' schedules by students of the lyceum.
@@ -11,7 +20,6 @@ It also has several functions of such as pin the message with the schedule
 (relevant for groups),
 and a change background color of the schedule.
 
-*Telegram Tag*: @gsl_schedule_bot
 
 ## ✏ Author
  **Jly4**
