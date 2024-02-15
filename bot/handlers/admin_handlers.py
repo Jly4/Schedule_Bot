@@ -7,30 +7,40 @@ from bot.utils.status import send_status
 from bot.filters.filters import IsAdmin
 from bot.utils.colors import color_set_menu, set_bg_color
 from bot.utils.utils import settings, del_msg_by_id, start_command
-from bot.utils.utils import disable_bot
+from bot.utils.utils import disable_bot, del_pin_message
 from bot.utils.schedule import turn_schedule_pin, turn_schedule, turn_deleting
 from bot.utils.school_classes import choose_class, set_class_number, set_class
 
 router = Router()
 
-""" add admin filter to file """
+""" 
+add admin filter to callbacks 
+
+message handler demand user additional filter '(filter, IsAdmin()))'
+otherwise it intercepts all messages
+"""
 router.callback_query.filter(IsAdmin())
-router.message.filter(IsAdmin())
 
 
 """ bot commands handlers
 """
 
 
-@router.message(Command('start'))
+@router.message(Command('start'), IsAdmin())
 async def start_msg(message: types.Message) -> None:
     await start_command(message)
 
 
-@router.message(Command('disable'))
+@router.message(Command('disable'), IsAdmin())
 async def disable_bot_msg(message: types.Message) -> None:
     await del_msg_by_id(message.chat.id, message.message_id, 'disable command')
     await disable_bot(message)  # start disable bot func
+
+
+@router.message(F.text == None)
+async def pin_schedule_msg(message: types.Message) -> None:
+    """ this func intercept all service messages from a telegram """
+    await del_pin_message(message)
 
 
 """ color handlers
@@ -42,7 +52,7 @@ async def color_set_menu_call(callback_query: types.CallbackQuery) -> None:
     await color_set_menu(callback_query)
 
 
-@router.message(F.text.lower().startswith('set color '))
+@router.message(F.text.lower().startswith('set color '), IsAdmin())
 async def set_color_msg(message: types.Message) -> None:
     await set_bg_color(message)
 

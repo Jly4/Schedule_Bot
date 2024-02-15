@@ -144,3 +144,11 @@ async def old_data_cleaner() -> None:
             os.remove(f'bot/data/{f}')
             custom_logger.debug(msg=f'{file_age}')
 
+
+async def del_pin_message(message: Message) -> None:
+    chat_id = message.chat.id
+    pinned_message_id = message.pinned_message.message_id
+    message_id = message.message_id
+
+    if pinned_message_id + 1 == message_id:
+        await del_msg_by_id(chat_id, message_id)

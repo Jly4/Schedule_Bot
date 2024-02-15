@@ -16,7 +16,7 @@ from bot.database.database import db
 from bot.logs.log_config import custom_logger
 from bot.exceptions.exceptions import retry_after
 from bot.config.config import schedule_auto_send_delay
-from bot.utils.messages import del_msg_by_db_name, del_msg_by_id
+from bot.utils.messages import del_msg_by_db_name
 from bot.utils.utils import run_task_if_disabled, old_data_cleaner
 from bot.utils.schedule_logic import ScheduleLogic
 from bot.keyboards import keyboards as kb
@@ -95,9 +95,11 @@ async def send_schedule(chat_id: int, now: int = 0, day: int = None):
 async def send_schedule_image(chat_id, txt, schedule_img) -> Message:
     while True:
         try:
-            schedule_msg = await bot.send_photo(chat_id,
-                                                caption=txt,
-                                                photo=schedule_img)
+            schedule_msg = await bot.send_photo(
+                chat_id,
+                caption=txt,
+                photo=schedule_img
+            )
 
             await pin_schedule(chat_id, schedule_msg.message_id)
             return schedule_msg
@@ -266,7 +268,6 @@ async def pin_schedule(chat_id, schedule_msg_id) -> None:
     """ pin schedule msg if the user has enabled this feature """
     if await db.get_db_data(chat_id, 'pin_schedule_message'):
         await bot.pin_chat_message(chat_id, schedule_msg_id)
-        await del_msg_by_id(chat_id, schedule_msg_id + 1)
 
 
 async def schedule_time_filter() -> bool:
