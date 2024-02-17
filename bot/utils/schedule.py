@@ -16,7 +16,7 @@ from bot.database.database import db
 from bot.logs.log_config import custom_logger
 from bot.exceptions.exceptions import retry_after
 from bot.config.config import schedule_auto_send_delay
-from bot.utils.messages import del_msg_by_db_name
+from bot.utils.messages import del_msg_by_db_name, del_msg_by_id
 from bot.utils.utils import run_task_if_disabled, old_data_cleaner
 from bot.utils.schedule_logic import ScheduleLogic
 from bot.keyboards import keyboards as kb
@@ -108,10 +108,21 @@ async def send_schedule_image(chat_id, txt, schedule_img) -> Message:
             await retry_after(chat_id)
 
         except Exception as e:
-            msg = f'<y>Schedule image to bot sending error: <r>{e}</></>'
-            custom_logger.critical(chat_id, msg)
-            await bot.send_message(chat_id, 'Ошибка отправки расписания')
-            await asyncio.sleep(60)
+            if "not enough rights to manage pinned messages" in str(e):
+                msg = f'<y>Schedule image to bot sending error: <r>{e}</></>'
+                custom_logger.critical(chat_id, msg)
+
+                msg = 'У бота нет прав на закрепление сообщений'
+                msg_id = await bot.send_message(chat_id, msg)
+                await asyncio.sleep(5)
+                await del_msg_by_id(chat_id, msg_id)
+
+            else:
+                msg = f'<y>Schedule image to bot sending error: <r>{e}</></>'
+                custom_logger.critical(chat_id, msg)
+
+                await bot.send_message(chat_id, 'Ошибка отправки расписания')
+                await asyncio.sleep(15)
 
 
 async def schedule_msg_txt(schedule_day, last_printed_change_time) -> str:
@@ -217,9 +228,11 @@ async def update_schedule(chat_id) -> list:
     except Exception as e:
         custom_logger.error(chat_id, f'<y>site unreachable, error:<r>{e}</></>')
         await asyncio.sleep(schedule_auto_send_delay * 60)
-        await bot.send_message(chat_id=chat_id,
-                               text='Сайт недоступен',
-                               disable_notification=True)
+        await bot.send_message(
+            chat_id=chat_id,
+            text='Сайт недоступен',
+            disable_notification=True
+        )
         return []
 
     # update check time
@@ -319,7 +332,6 @@ async def turn_schedule(callback_query: CallbackQuery) -> None:
         txt = 'Автоматическое получение расписания включено'
         await send_status(chat_id, text=txt, reply_markup=None)
         await asyncio.sleep(1)
-        await send_schedule(chat_id, now=1)
         await run_task_if_disabled(chat_id, 'schedule_auto_send')
 
 

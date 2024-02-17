@@ -38,17 +38,20 @@ class ScheduleLogic:
                 return 5  # If Saturday before noon, return Saturday
             return 0  # If Saturday after noon, return Monday
 
-        if hour > 15:
-            return day_of_week + 1  # If after 3 PM, return tomorrow
+        if hour > 14:
+            return day_of_week + 1  # If after 2 PM, return tomorrow
 
         return day_of_week  # Otherwise, return today
 
     async def should_send(self) -> bool:
         """ if schedule should be sent """
+        custom_logger.debug(self.chat_id)
         if await self.today_condition():
+            custom_logger.debug(self.chat_id, '<y>today_cond: <r>True</></>')
             return True
 
         if await self.tomorrow_condition():
+            custom_logger.debug(self.chat_id, '<y>tomorrow_cond: <r>True</></>')
             return True
 
         return False
@@ -93,6 +96,9 @@ class ScheduleLogic:
         if not await self.schedule_changed() and hour < 20:
             return False
 
+        if await self.printed_tomorrow():
+            return False
+
         return True
 
     async def schedule_changed(self) -> bool:
@@ -103,7 +109,10 @@ class ScheduleLogic:
         data = await db.get_db_data(self.chat_id, *data_name)
 
         if data[0] != data[1]:
+            custom_logger.debug(self.chat_id, '<y>sched_chang: <r>True</></>')
             return True
+
+        custom_logger.debug(self.chat_id, '<y>sched_chang: <r>False</></>')
         return False
 
     async def printed_today(self) -> bool:
@@ -139,6 +148,8 @@ class ScheduleLogic:
         last_printed_change_time = data[1]
 
         if schedule_change_time != last_printed_change_time:
+            custom_logger.debug(self.chat_id, '<y>time_changed: <r>True</></>')
             return True
-        else:
-            return False
+
+        custom_logger.debug(self.chat_id, '<y>time_changed: <r>False</></>')
+        return False

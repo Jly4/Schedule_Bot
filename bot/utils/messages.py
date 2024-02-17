@@ -6,6 +6,7 @@ from bot.database.database import db
 
 
 async def del_msg_by_id(chat_id: int, msg_id: int, msg_name: str = '') -> None:
+    custom_logger.debug(chat_id, f'<y>message name: <r>{msg_name}</></>')
     try:
         await bot.delete_message(chat_id, msg_id)
 

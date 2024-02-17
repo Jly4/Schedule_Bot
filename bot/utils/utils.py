@@ -147,8 +147,16 @@ async def old_data_cleaner() -> None:
 
 async def del_pin_message(message: Message) -> None:
     chat_id = message.chat.id
-    pinned_message_id = message.pinned_message.message_id
-    message_id = message.message_id
+    chat = await bot.get_chat(chat_id)
+    custom_logger.debug(chat_id)
 
-    if pinned_message_id + 1 == message_id:
-        await del_msg_by_id(chat_id, message_id)
+    message_id = message.message_id
+    pinned_message_id = chat.pinned_message.message_id
+    about_pin_message = message.pinned_message is not None
+
+    if about_pin_message:
+        await del_msg_by_id(chat_id, message_id, 'pin_msg')
+    else:
+        custom_logger.critical(chat_id, f'<y>pin_id: <r>{pinned_message_id}')
+        custom_logger.critical(chat_id, f'<y>message_id: <r>{message_id}')
+        custom_logger.critical(message)

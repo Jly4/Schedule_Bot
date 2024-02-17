@@ -59,7 +59,7 @@ async def edit_status(args) -> None:
 
     except exceptions.TelegramBadRequest as e:
         if "exactly the same as a current content" in str(e):
-            custom_logger.error(chat_id, '<y>message have same content</>')
+            custom_logger.debug(chat_id, '<y>message have same content</>')
             return
 
         elif "message to edit not found" in str(e):
