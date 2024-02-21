@@ -1,0 +1,9 @@
+[Unit]
+Description=My Script
+
+[Service]
+ExecStart=/home/nc_admin/Schedule_Bot/Schedule_Bot_Loader.sh
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

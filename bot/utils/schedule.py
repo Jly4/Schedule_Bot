@@ -5,6 +5,7 @@ import warnings
 import platform
 import pandas as pd
 
+from typing import Optional
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 from aiogram.types import FSInputFile, CallbackQuery, Message
@@ -14,9 +15,9 @@ from main import bot
 from bot.utils.status import send_status
 from bot.database.database import db
 from bot.logs.log_config import custom_logger
-from bot.exceptions.exceptions import retry_after
+from bot.exceptions.exceptions import retry_after, not_enough_rights_to_pin
 from bot.config.config import schedule_auto_send_delay
-from bot.utils.messages import del_msg_by_db_name, del_msg_by_id
+from bot.utils.messages import del_msg_by_db_name
 from bot.utils.utils import run_task_if_disabled, old_data_cleaner
 from bot.utils.schedule_logic import ScheduleLogic
 from bot.keyboards import keyboards as kb
@@ -30,7 +31,13 @@ system_type = platform.system()
 
 async def schedule_auto_send(chat_id: int):
     custom_logger.debug(chat_id)
-    while await db.get_db_data(chat_id, 'schedule_auto_send'):
+    conditions = await db.get_db_data(
+        chat_id,
+        'schedule_auto_send',
+        'bot_enabled'
+    )
+
+    while conditions[0] and conditions[1]:
         await old_data_cleaner()  # clean bot/data folder from old files
 
         if await schedule_time_filter():
@@ -74,6 +81,9 @@ async def send_schedule(chat_id: int, now: int = 0, day: int = None):
         schedule_img = FSInputFile(image_path)
         schedule_msg = await send_schedule_image(chat_id, txt, schedule_img)
 
+        if schedule_msg is None:
+            return
+
         data = {
             'last_schedule_message_id': schedule_msg.message_id,
             'last_printed_change_time': last_printed_change_time
@@ -92,37 +102,28 @@ async def send_schedule(chat_id: int, now: int = 0, day: int = None):
     await send_status(chat_id)
 
 
-async def send_schedule_image(chat_id, txt, schedule_img) -> Message:
-    while True:
-        try:
-            schedule_msg = await bot.send_photo(
-                chat_id,
-                caption=txt,
-                photo=schedule_img
-            )
+async def send_schedule_image(chat_id, txt, schedule_img) -> Optional[Message]:
+    try:
+        schedule_msg = await bot.send_photo(
+            chat_id,
+            caption=txt,
+            photo=schedule_img
+        )
+        await pin_schedule(chat_id, schedule_msg.message_id)
 
-            await pin_schedule(chat_id, schedule_msg.message_id)
-            return schedule_msg
+        return schedule_msg
 
-        except TelegramRetryAfter:
-            await retry_after(chat_id)
+    except TelegramRetryAfter:
+        await retry_after(chat_id)
+        await send_schedule_image(chat_id, txt, schedule_img)
 
-        except Exception as e:
-            if "not enough rights to manage pinned messages" in str(e):
-                msg = f'<y>Schedule image to bot sending error: <r>{e}</></>'
-                custom_logger.critical(chat_id, msg)
+    except Exception as e:
+        msg = f'<y>Schedule image to bot sending error: <r>{e}</></>'
+        custom_logger.critical(chat_id, msg)
 
-                msg = 'У бота нет прав на закрепление сообщений'
-                msg_id = await bot.send_message(chat_id, msg)
-                await asyncio.sleep(5)
-                await del_msg_by_id(chat_id, msg_id)
-
-            else:
-                msg = f'<y>Schedule image to bot sending error: <r>{e}</></>'
-                custom_logger.critical(chat_id, msg)
-
-                await bot.send_message(chat_id, 'Ошибка отправки расписания')
-                await asyncio.sleep(15)
+        await bot.send_message(chat_id, 'Ошибка отправки расписания')
+        await asyncio.sleep(10)
+        return
 
 
 async def schedule_msg_txt(schedule_day, last_printed_change_time) -> str:
@@ -280,7 +281,13 @@ async def schedule_for_day(query: CallbackQuery) -> None:
 async def pin_schedule(chat_id, schedule_msg_id) -> None:
     """ pin schedule msg if the user has enabled this feature """
     if await db.get_db_data(chat_id, 'pin_schedule_message'):
-        await bot.pin_chat_message(chat_id, schedule_msg_id)
+        try:
+            await bot.pin_chat_message(chat_id, schedule_msg_id)
+
+        except Exception as e:
+            custom_logger.critical(chat_id, f'<y>pin error: <r>{e}</></>')
+            if "not enough rights to manage pinned messages" in str(e):
+                await not_enough_rights_to_pin(chat_id)
 
 
 async def schedule_time_filter() -> bool:

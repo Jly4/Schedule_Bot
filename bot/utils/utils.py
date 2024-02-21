@@ -118,13 +118,17 @@ async def run_task_if_disabled(chat_id: int, task_name: str) -> None:
 
     for task in all_tasks:
         if task.get_name() == task_name_with_id and not task.done():
-            custom_logger.debug(chat_id,
-                                f'<y>task: <r>{task_name} </>running</>')
+            custom_logger.debug(
+                chat_id,
+                f'<y>task: <r>{task_name} </>running</>'
+            )
             return
+
     if not await db.get_db_data(chat_id, 'schedule_auto_send'):
         custom_logger.debug(chat_id, f'<y>task: <r>{task_name} </>disabled</>')
         return
     custom_logger.debug(chat_id, f'<y>task: <r>{task_name} </>starting</>')
+
     if task_name == 'schedule_auto_send':
         from bot.utils.schedule import schedule_auto_send
         asyncio.create_task(schedule_auto_send(chat_id), name=task_name_with_id)
@@ -142,7 +146,6 @@ async def old_data_cleaner() -> None:
 
         if file_age > 3600 * 24 * 7:
             os.remove(f'bot/data/{f}')
-            custom_logger.debug(msg=f'{file_age}')
 
 
 async def del_pin_message(message: Message) -> None:

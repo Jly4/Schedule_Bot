@@ -11,15 +11,16 @@ dp = Dispatcher()
 
 
 async def start():
-    from bot.utils.utils import run_bot_tasks
-    await run_bot_tasks()
     from bot.handlers import admin_handlers, user_handlers
+    from bot.utils.utils import run_bot_tasks
+
     dp.include_routers(
         user_handlers.router,
         admin_handlers.router
     )
 
     await bot.delete_webhook(drop_pending_updates=True)
+    asyncio.create_task(run_bot_tasks())
     await dp.start_polling(bot)
 
 
