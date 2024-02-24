@@ -1,5 +1,5 @@
 [Unit]
-Description=My Script
+Description=Schedule_Bot/Schedule_Bot_Loader
 
 [Service]
 ExecStart=/home/nc_admin/Schedule_Bot/Schedule_Bot_Loader.sh

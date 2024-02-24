@@ -1,8 +1,12 @@
 #!/bin/bash
 ############-YOU SCRIPT-##############
 
+
 cd /home/nc_admin/Schedule_Bot/
+cp _Instal_scripts/Montserrat/*.ttf /usr/share/fonts/ 
+fc-cache -f -v
 
-/home/nc_admin/.local/bin/poetry install
-/home/nc_admin/.local/bin/poetry run python main.py
-
+pip install poetry
+poetry env use python3.11
+poetry install
+poetry run python main.py

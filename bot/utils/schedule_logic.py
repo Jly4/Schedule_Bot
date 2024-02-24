@@ -47,6 +47,7 @@ class ScheduleLogic:
         custom_logger.debug(self.chat_id)
 
         if not await self.weekend_condition():
+            custom_logger.debug(self.chat_id, '<y>weekend_cond: <r>False</></>')
             return False
 
         if await self.today_condition():
@@ -100,28 +101,26 @@ class ScheduleLogic:
 
     async def tomorrow_condition(self) -> bool:
         """ schedule can be sent for tomorrow
-            if 1 and 2 and 3 -> True
-            1. if schedule on site was updated
-            2. if hours > 15, the school day is over.
-            3. the schedule for tomorrow has been changed or hour > 20
+            if all(1, 2, 3, 4, 5) -> True
+            1. if hours > 15 (the school day is over)
+            2. if not saturday
+            3. the schedule for tomorrow has not been printed
+            4. if schedule on site been changed or hour > 20
         """
         local_date = datetime.now(self.local_timezone)
         day_of_week = local_date.weekday()
         hour = local_date.hour
 
-        if not await self.time_changed():
+        if hour < 15:
             return False
 
         if day_of_week == 5:
             return False
 
-        if hour < 15:
+        if await self.printed_tomorrow():
             return False
 
         if not await self.schedule_changed() and hour < 20:
-            return False
-
-        if await self.printed_tomorrow():
             return False
 
         return True

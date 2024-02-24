@@ -120,7 +120,7 @@ async def run_task_if_disabled(chat_id: int, task_name: str) -> None:
         if task.get_name() == task_name_with_id and not task.done():
             custom_logger.debug(
                 chat_id,
-                f'<y>task: <r>{task_name} </>running</>'
+                f'<y>task: <r>{task_name} </> already running</>'
             )
             return
 

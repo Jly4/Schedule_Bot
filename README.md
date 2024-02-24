@@ -7,7 +7,7 @@
 
 
 
-*Current Status*: 2.0.0-beta
+*Current Status*: 2.0.0
 
 *Telegram Tag*: @gsl_schedule_bot
 

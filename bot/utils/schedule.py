@@ -50,19 +50,20 @@ async def send_schedule(chat_id: int, now: int = 0, day: int = None):
     custom_logger.debug(chat_id, f'<y>now: <r>{now}</></>')
     local_date = datetime.now(local_timezone)
     logic = ScheduleLogic(chat_id)
-    should_send = await logic.should_send()
-    schedule_day = await logic.schedule_day()
 
     # get schedule
     schedule = await update_schedule(chat_id)
     if not schedule:
         return
 
+    should_send = await logic.should_send()
+    schedule_day = await logic.schedule_day()
+    custom_logger.debug(chat_id, f'<y>schedule_day: <r>{schedule_day}</></>')
+    custom_logger.debug(chat_id, f'<y>should_send: <r>{should_send}</></>')
+
     # if argument day is not empty
     if isinstance(day, int):
         schedule_day = day
-    custom_logger.debug(chat_id, f'<y>schedule_day: <r>{schedule_day}</></>')
-    custom_logger.debug(chat_id, f'<y>should_send: <r>{should_send}</></>')
 
     if should_send or now:
         last_print_time = local_date.strftime('%d.%m.%Y. %H:%M:%S')
@@ -168,9 +169,13 @@ async def generate_image(chat_id, formatted_schedule, img) -> None:
 
     # Создаем шрифт по умолчанию для PIL
     if system_type == "Windows":
-        font = ImageFont.truetype("arial.ttf", 18)  # for windows
+        font = ImageFont.truetype("arial.ttf", 18)
     elif system_type == "Linux":
-        font = ImageFont.truetype("DejaVuSans.ttf", 16)  # for linux
+        font = ImageFont.truetype(
+            "Montserrat-VariableFont_wght.ttf",
+            17,
+            327680
+        )
     else:
         font = ImageFont.load_default()  # ну, а кто его знает
 
@@ -338,8 +343,9 @@ async def turn_schedule(callback_query: CallbackQuery) -> None:
 
         txt = 'Автоматическое получение расписания включено'
         await send_status(chat_id, text=txt, reply_markup=None)
-        await asyncio.sleep(1)
+        await asyncio.sleep(2)
         await run_task_if_disabled(chat_id, 'schedule_auto_send')
+        await send_status(chat_id)
 
 
 async def schedule_file_name(chat_id, day) -> str:
