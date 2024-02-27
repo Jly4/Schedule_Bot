@@ -5,11 +5,12 @@ from datetime import datetime
 from bot.database.database import db
 from bot.logs.log_config import custom_logger
 
+local_timezone = pytz.timezone('Asia/Tomsk')
+
 
 class ScheduleLogic:
     def __init__(self, chat_id: int):
         self.chat_id = chat_id
-        self.local_timezone = pytz.timezone('Asia/Tomsk')
 
     async def should_regen_img(self, image_path_name: str) -> bool:
         """ if schedule should be regenerated
@@ -23,9 +24,9 @@ class ScheduleLogic:
 
         return False
 
-    async def schedule_day(self) -> int:
-        custom_logger.debug(self.chat_id)
-        local_date = datetime.now(self.local_timezone)
+    @staticmethod
+    async def schedule_day() -> int:
+        local_date = datetime.now(local_timezone)
         day_of_week = local_date.weekday()
         hour = local_date.hour
 
@@ -46,8 +47,8 @@ class ScheduleLogic:
         """ if schedule should be sent """
         custom_logger.debug(self.chat_id)
 
-        if not await self.weekend_condition():
-            custom_logger.debug(self.chat_id, '<y>weekend_cond: <r>False</></>')
+        if await self.weekend_filter():
+            custom_logger.debug(self.chat_id, '<y>wknd_fltr: <r>True</></>')
             return False
 
         if await self.today_condition():
@@ -60,23 +61,24 @@ class ScheduleLogic:
 
         return False
 
-    async def weekend_condition(self) -> bool:
+    @staticmethod
+    async def weekend_filter() -> bool:
         """ weekend filter for schedule sending
-            if not (1 or 2) -> True
-            1. if saturday and hour < 12
-            2. if sunday and hour > 20
+            if 1 or 2 -> True (skip sending)
+            1. if saturday and hour > 12
+            2. if sunday and hour < 20
         """
-        local_date = datetime.now(self.local_timezone)
+        local_date = datetime.now(local_timezone)
         day_of_week = local_date.weekday()
         hour = local_date.hour
 
-        if day_of_week == 5 and hour < 12:
-            return False
+        if day_of_week == 5 and hour > 12:
+            return True
 
-        if day_of_week == 6 and hour > 20:
-            return False
+        if day_of_week == 6 and hour < 20:
+            return True
 
-        return True
+        return False
 
     async def today_condition(self) -> bool:
         """ schedule can be sent for today
@@ -85,13 +87,13 @@ class ScheduleLogic:
             2. if hour < 15,otherwise the schedule for today is not relevant
             3. the schedule for today has been changed
         """
-        local_date = datetime.now(self.local_timezone)
+        local_date = datetime.now(local_timezone)
         hour = local_date.hour
 
         if not await self.time_changed():
             return False
 
-        if hour > 15:
+        if hour > 14:
             return False
 
         if not await self.schedule_changed():
@@ -107,7 +109,7 @@ class ScheduleLogic:
             3. the schedule for tomorrow has not been printed
             4. if schedule on site been changed or hour > 20
         """
-        local_date = datetime.now(self.local_timezone)
+        local_date = datetime.now(local_timezone)
         day_of_week = local_date.weekday()
         hour = local_date.hour
 
@@ -117,10 +119,10 @@ class ScheduleLogic:
         if day_of_week == 5:
             return False
 
-        if await self.printed_tomorrow():
+        if not await self.schedule_changed() and hour < 20:
             return False
 
-        if not await self.schedule_changed() and hour < 20:
+        if await self.printed_tomorrow():
             return False
 
         return True
@@ -131,6 +133,7 @@ class ScheduleLogic:
         """
         data_name = ['schedule_json', 'prev_schedule_json']
         data = await db.get_db_data(self.chat_id, *data_name)
+        custom_logger.critical(msg=f'\n{data[0]}\n{data[1]}')
 
         if data[0] != data[1]:
             custom_logger.debug(self.chat_id, '<y>sched_change: <r>True</></>')
@@ -156,19 +159,23 @@ class ScheduleLogic:
 
     async def printed_tomorrow(self) -> bool:
         """ returns True if today schedule was printed """
-        local_date = datetime.now(self.local_timezone)
-        tomorrow = local_date.day + 1
+        local_date = datetime.now(local_timezone)
+        tomorrow = local_date.weekday() + 1
 
         data_name = ['last_print_time_day', ]
         last_print_day = await db.get_db_data(self.chat_id, *data_name)
+        custom_logger.debug(self.chat_id, f'last_print_day {last_print_day}')
 
         if last_print_day == tomorrow:
+            custom_logger.debug(self.chat_id, '<y>printed_tmrw: <r>True</></>')
             return True
+
+        custom_logger.debug(self.chat_id, '<y>printed_tmrw: <r>False</></>')
         return False
 
     async def printed_today(self) -> bool:
         """ returns True if today schedule was printed """
-        local_date = datetime.now(self.local_timezone)
+        local_date = datetime.now(local_timezone)
         today = local_date.day
 
         data_name = ['last_print_time_day', ]

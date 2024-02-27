@@ -49,21 +49,22 @@ async def schedule_auto_send(chat_id: int):
 async def send_schedule(chat_id: int, now: int = 0, day: int = None):
     custom_logger.debug(chat_id, f'<y>now: <r>{now}</></>')
     local_date = datetime.now(local_timezone)
-    logic = ScheduleLogic(chat_id)
-
-    # get schedule
-    schedule = await update_schedule(chat_id)
-    if not schedule:
-        return
-
-    should_send = await logic.should_send()
-    schedule_day = await logic.schedule_day()
-    custom_logger.debug(chat_id, f'<y>schedule_day: <r>{schedule_day}</></>')
-    custom_logger.debug(chat_id, f'<y>should_send: <r>{should_send}</></>')
+    schedule_day = await ScheduleLogic.schedule_day()
 
     # if argument day is not empty
     if isinstance(day, int):
         schedule_day = day
+
+    # get schedule
+    schedule = await update_schedule(chat_id, schedule_day)
+    if not schedule:
+        return
+
+    # logic
+    logic = ScheduleLogic(chat_id)
+    should_send = await logic.should_send()
+    custom_logger.debug(chat_id, f'<y>schedule_day: <r>{schedule_day}</></>')
+    custom_logger.debug(chat_id, f'<y>should_send: <r>{should_send}</></>')
 
     if should_send or now:
         last_print_time = local_date.strftime('%d.%m.%Y. %H:%M:%S')
@@ -93,7 +94,7 @@ async def send_schedule(chat_id: int, now: int = 0, day: int = None):
 
     if should_send:
         data = {
-            'last_print_time_day': local_date.day,
+            'last_print_time_day': schedule_day,
             'last_print_time_hour': local_date.hour,
             'last_print_time': last_print_time,
             'prev_schedule_json': prev_schedule_json
@@ -220,7 +221,7 @@ async def turn_schedule_pin(callback_query: CallbackQuery) -> None:
     await send_status(chat_id)
 
 
-async def update_schedule(chat_id) -> list:
+async def update_schedule(chat_id, schedule_day) -> list:
     """ update schedule from site """
     local_date = datetime.now(local_timezone)
     cls = await db.get_db_data(chat_id, 'school_class')
@@ -247,7 +248,7 @@ async def update_schedule(chat_id) -> list:
     time_pattern = r'\d{2}\.\d{2}\.\d{4}\. (\d{2}:\d{2}:\d{2})'
     schedule_change_time = re.search(time_pattern, schedule[3][0][0]).group()
     # creat json with formatted schedule
-    formatted_schedule = await format_schedule(schedule, local_date.weekday())
+    formatted_schedule = await format_schedule(schedule, schedule_day)
     schedule_json = formatted_schedule.to_json()
 
     data = {
