@@ -38,12 +38,20 @@ async def schedule_auto_send(chat_id: int):
     )
 
     while conditions[0] and conditions[1]:
+        custom_logger.debug(chat_id, f'cond: {conditions[0], conditions[1]}')
         await old_data_cleaner()  # clean bot/data folder from old files
 
         if await schedule_time_filter():
             await send_schedule(chat_id)
 
         await asyncio.sleep(schedule_auto_send_delay * 60)
+
+        # update conditions
+        conditions = await db.get_db_data(
+            chat_id,
+            'schedule_auto_send',
+            'bot_enabled'
+        )
 
 
 async def send_schedule(chat_id: int, now: int = 0, day: int = None):
@@ -223,7 +231,6 @@ async def turn_schedule_pin(callback_query: CallbackQuery) -> None:
 
 async def update_schedule(chat_id, schedule_day) -> list:
     """ update schedule from site """
-    local_date = datetime.now(local_timezone)
     cls = await db.get_db_data(chat_id, 'school_class')
     chng = await db.get_db_data(chat_id, 'school_change')
     site = f"https://lyceum.tom.ru/raspsp/index.php?k={cls}&s={chng}"

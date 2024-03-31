@@ -24,13 +24,11 @@ async def run_bot_tasks():
         return
 
     for chat_id in chat_id_list:
-        from bot.utils.status import send_status
-        await send_status(chat_id)
         # if user have disabled bot
         bot_enabled = await db.get_db_data(chat_id, 'bot_enabled')
         if not bot_enabled:
             custom_logger.info(chat_id, "<y>user was disable bot</>")
-            return
+            continue
 
         # if user hasn't received schedule for 90 last days
         user_active = await user_is_active(chat_id)
@@ -108,6 +106,7 @@ async def status_command(message: Message) -> None:
     if not await db.get_db_data(chat_id, 'bot_enabled'):
         return
 
+    await del_msg_by_db_name(chat_id, 'last_status_message_id')
     await send_status(chat_id, edit=0)
     await del_msg_by_id(chat_id, message.message_id, 'status command')
 
@@ -163,3 +162,23 @@ async def del_pin_message(message: Message) -> None:
         custom_logger.critical(chat_id, f'<y>pin_id: <r>{pinned_message_id}')
         custom_logger.critical(chat_id, f'<y>message_id: <r>{message_id}')
         custom_logger.critical(message)
+
+
+async def description(chat_id) -> None:
+    msg = (
+        'Как работает автоматическое обновление расписание:\n\n- В будние дни '
+        'расписание может быть отправлено на текущий день и на завтра.\n- На '
+        'текущий день оно может быть отправлено если расписание было '
+        'изменено на текущий день и сейчас до 15 часов.\n- На завтра оно '
+        'может быть отправлено, если расписание на завтра было изменено, '
+        'и сейчас больше 15 часов.\nЕсли расписание на завтра не было '
+        'изменено, оно отправится в 20 часов.\n- В субботу расписание может '
+        'быть отправлено только если оно изменилось на субботу и сейчас '
+        'меньше 11 часов.\n- В воскресенье расписание будет отправлено '
+        'в 20 часов.\n\nВопросы и предложения по кнопке ниже:'
+    )
+
+    await send_status(
+        chat_id=chat_id,
+        text=msg,
+        reply_markup=kb.description())

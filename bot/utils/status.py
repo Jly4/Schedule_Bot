@@ -70,8 +70,15 @@ async def edit_status(args) -> None:
             custom_logger.error(chat_id, f'<y>edit error: <r>{e}</></>')
             await resend_status(args, clean=1)
 
+    except exceptions.TelegramNetworkError as e:
+        return
+
     except Exception as e:
-        custom_logger.critical(chat_id, f'<y>edit error: <r>{e}</></>')
+        custom_logger.critical(
+            chat_id,
+            msg=f'<y>edit error: <r>{e}</></>',
+            exception=True)
+
         await resend_status(args, clean=1)
 
 

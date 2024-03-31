@@ -7,7 +7,7 @@ from bot.utils.status import send_status
 from bot.filters.filters import IsAdmin
 from bot.utils.colors import color_set_menu, set_bg_color
 from bot.utils.utils import settings, del_msg_by_id, start_command
-from bot.utils.utils import disable_bot
+from bot.utils.utils import disable_bot, description
 from bot.utils.schedule import turn_schedule_pin, turn_schedule, turn_deleting
 from bot.utils.school_classes import choose_class, set_class_number, set_class
 
@@ -80,8 +80,7 @@ async def turn_pin_schedule_call(callback_query: types.CallbackQuery) -> None:
 
 
 @router.callback_query(F.data == 'schedule_auto_delete')
-async def turn_deleting_call(callback_query: types.CallbackQuery) -> \
-        None:
+async def turn_deleting_call(callback_query: types.CallbackQuery) -> None:
     await turn_deleting(callback_query)
 
 
@@ -96,9 +95,7 @@ async def disable_bot_call(callback_query: types.CallbackQuery) -> None:
 
 @router.callback_query(F.data == 'description')
 async def description_call(callback_query: types.CallbackQuery) -> None:
-    await send_status(chat_id=callback_query.message.chat.id,
-                      text='Вопросы и предложения по кнопке ниже:',
-                      reply_markup=kb.description())
+    await description(callback_query.message.chat.id)
 
 
 """ set class number, letter, and change handlers
