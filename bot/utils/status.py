@@ -18,7 +18,6 @@ async def send_status(
         edit: int = 1,
         reply_markup: Optional[InlineKeyboardMarkup] = kb.main()
 ) -> None:
-
     status_msg_id = await db.get_status_msg_id(chat_id)
     if not status_msg_id:
         return
@@ -43,10 +42,12 @@ async def send_status(
 async def edit_status(args) -> None:
     chat_id: int = args["chat_id"]
     try:
-        await bot.edit_message_text(chat_id=args["chat_id"],
-                                    text=args["text"],
-                                    message_id=args["message_id"],
-                                    reply_markup=args["reply_markup"])
+        await bot.edit_message_text(
+            chat_id=args["chat_id"],
+            text=args["text"],
+            message_id=args["message_id"],
+            reply_markup=args["reply_markup"]
+        )
 
         custom_logger.debug(chat_id, '<y>successful edited</>')
 
@@ -86,10 +87,12 @@ async def resend_status(args: dict, clean: int = 0) -> None:
     chat_id = args["chat_id"]
     try:
         await del_msg_by_db_name(chat_id, 'last_status_message_id')
-        status_msg = await bot.send_message(chat_id=args["chat_id"],
-                                            text=args["text"],
-                                            reply_markup=args["reply_markup"],
-                                            disable_notification=True)
+        status_msg = await bot.send_message(
+            chat_id=args["chat_id"],
+            text=args["text"],
+            reply_markup=args["reply_markup"],
+            disable_notification=True
+        )
         # update status id
         data = {'last_status_message_id': status_msg.message_id}
         await db.update_db_data(chat_id, **data)
@@ -113,12 +116,14 @@ async def resend_status(args: dict, clean: int = 0) -> None:
 
 
 async def status_message_text(chat_id: int) -> str:
-    settings = await db.get_db_data(chat_id,
-                                    'pin_schedule_message',
-                                    'schedule_auto_send',
-                                    'school_class',
-                                    'last_printed_change_time',
-                                    'last_check_schedule')
+    settings = await db.get_db_data(
+        chat_id,
+        'pin_schedule_message',
+        'schedule_auto_send',
+        'school_class',
+        'last_printed_change_time',
+        'last_check_schedule'
+    )
 
     # save settings into variables
     pin_schedule_message, schedule_auto_send, school_class, \

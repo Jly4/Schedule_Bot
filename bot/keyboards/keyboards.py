@@ -1,7 +1,7 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from bot.config.config import classes_dict
+from bot.config.config import classes_dict, dev_id
 
 
 def main() -> InlineKeyboardMarkup:
@@ -26,6 +26,7 @@ def schedule_for_day() -> InlineKeyboardMarkup:
         'schedule_for_day_3': 'Четверг',
         'schedule_for_day_4': 'Пятница',
         'schedule_for_day_5': 'Суббота',
+        'choose_class': 'Другой класс',
         'status': 'Назад'
     }
     for callback, text in buttons.items():
@@ -34,27 +35,31 @@ def schedule_for_day() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def settings() -> InlineKeyboardMarkup:
+def settings(*user_id: int) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
 
     buttons = {
-        'choose_class': 'Настроить класс',
-        'schedule_auto_send': 'Автоматическое обновление',
+        'set_class': 'Изменить класс',
+        'schedule_auto_send': 'Обновление расписания',
         'pin_schedule': 'Закреплять расписание',
-        'color_menu': 'Цвет фона расписания',
+        'color_menu': 'Изменить цвет расписания',
+        'schedule_auto_delete': 'Удалять предыдущее расписание',
         'disable_bot': 'Отключить бота',
-        'schedule_auto_delete': 'Удаление расписания',
         'description': 'Информация о боте',
-        'status': 'Закрыть настройки'
     }
 
     for callback, text in buttons.items():
         kb.button(text=text, callback_data=callback).adjust(2)
 
+    if dev_id == str(*user_id):
+        kb.button(text='Dev', callback_data='dev_settings').adjust(2)
+
+    kb.button(text='Закрыть настройки', callback_data='status').adjust(2)
+
     return kb.as_markup()
 
 
-def choose_class_num() -> InlineKeyboardMarkup:
+def choose_class_number() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     buttons = {
         'class_number_1': '1',
@@ -68,7 +73,7 @@ def choose_class_num() -> InlineKeyboardMarkup:
         'class_number_9': '9',
         'class_number_10': '10',
         'class_number_11': '11',
-        'settings': 'Назад'
+        'status': 'Назад'
     }
     for callback, text in buttons.items():
         kb.button(text=text, callback_data=callback).adjust(3)
@@ -131,3 +136,20 @@ def choose_color() -> InlineKeyboardMarkup:
         kb.button(text=text, callback_data=callback).adjust(3)
 
     return kb.as_markup()
+
+
+def dev_settings() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+
+    buttons = {
+        'announce_guide': 'Рассылка',
+        'suspend_date_guide': 'Даты приостановки',
+        'suspend_bot': 'Приостановить бота',
+        'settings': 'Назад'
+    }
+
+    for callback, text in buttons.items():
+        kb.button(text=text, callback_data=callback).adjust(2)
+
+    return kb.as_markup()
+

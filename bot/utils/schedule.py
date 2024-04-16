@@ -16,11 +16,14 @@ from bot.utils.status import send_status
 from bot.database.database import db
 from bot.logs.log_config import custom_logger
 from bot.exceptions.exceptions import retry_after, not_enough_rights_to_pin
-from bot.config.config import schedule_auto_send_delay
+from bot.config.config import schedule_auto_send_delay, second_change_nums
+from bot.config.config import classes_dict
 from bot.utils.messages import del_msg_by_db_name
 from bot.utils.utils import run_task_if_disabled, old_data_cleaner
 from bot.utils.schedule_logic import ScheduleLogic
 from bot.keyboards import keyboards as kb
+from bot.filters.filters import AutoSendFilter
+
 
 # Подавление предупреждений BeautifulSoup
 warnings.filterwarnings("ignore", category=UserWarning, module="bs4")
@@ -30,31 +33,30 @@ system_type = platform.system()
 
 
 async def schedule_auto_send(chat_id: int):
+    """
+    if autosend filter == 0 > stops cycle
+    if autosend filter == 1 > wait while bot will unsuspend
+    if autosend filter == 2 > normal working
+    """
     custom_logger.debug(chat_id)
-    conditions = await db.get_db_data(
-        chat_id,
-        'schedule_auto_send',
-        'bot_enabled'
-    )
+    autosend = AutoSendFilter(chat_id)
+    autosend_filter = await autosend.filter()
 
-    while conditions[0] and conditions[1]:
-        custom_logger.debug(chat_id, f'cond: {conditions[0], conditions[1]}')
-        await old_data_cleaner()  # clean bot/data folder from old files
-
-        if await schedule_time_filter():
+    while autosend_filter:
+        if autosend_filter == 2:
+            await old_data_cleaner()  # clean bot/data folder from old files
             await send_schedule(chat_id)
 
         await asyncio.sleep(schedule_auto_send_delay * 60)
-
-        # update conditions
-        conditions = await db.get_db_data(
-            chat_id,
-            'schedule_auto_send',
-            'bot_enabled'
-        )
+        autosend_filter = await autosend.filter()
 
 
-async def send_schedule(chat_id: int, now: int = 0, day: int = None):
+async def send_schedule(
+        chat_id: int,
+        now: int = 0,
+        day: int = None,
+        cls: str = ''
+) -> None:
     custom_logger.debug(chat_id, f'<y>now: <r>{now}</></>')
     local_date = datetime.now(local_timezone)
     schedule_day = await ScheduleLogic.schedule_day()
@@ -63,8 +65,13 @@ async def send_schedule(chat_id: int, now: int = 0, day: int = None):
     if isinstance(day, int):
         schedule_day = day
 
+    # if argument cls is empty
+    if not cls:
+        cls += str(await db.get_db_data(chat_id, 'school_class'))
+        cls += str(await db.get_db_data(chat_id, 'school_change'))
+
     # get schedule
-    schedule = await update_schedule(chat_id, schedule_day)
+    schedule = await update_schedule(chat_id, schedule_day, cls)
     if not schedule:
         return
 
@@ -87,7 +94,7 @@ async def send_schedule(chat_id: int, now: int = 0, day: int = None):
         await generate_image(chat_id, formatted_schedule, image_path)
         await del_old_schedule(chat_id)
 
-        txt = await schedule_msg_txt(schedule_day, last_printed_change_time)
+        txt = await schedule_txt(schedule_day, last_printed_change_time, cls)
         schedule_img = FSInputFile(image_path)
         schedule_msg = await send_schedule_image(chat_id, txt, schedule_img)
 
@@ -136,7 +143,8 @@ async def send_schedule_image(chat_id, txt, schedule_img) -> Optional[Message]:
         return
 
 
-async def schedule_msg_txt(schedule_day, last_printed_change_time) -> str:
+async def schedule_txt(schedule_day, last_printed_change_time, cls) -> str:
+    formatted_class = classes_dict[cls[:-1]]
     day = {0: 'Понедельник',
            1: 'Вторник',
            2: 'Среда',
@@ -145,7 +153,10 @@ async def schedule_msg_txt(schedule_day, last_printed_change_time) -> str:
            5: 'Суббота'
            }[schedule_day]
 
-    msg = f'{day} - последние изменение: [{last_printed_change_time}]\n\n'
+    msg = (
+        f'{formatted_class} {day} - последние изменение: '
+        f'[{last_printed_change_time}]\n\n'
+    )
 
     return msg
 
@@ -198,15 +209,14 @@ async def generate_image(chat_id, formatted_schedule, img) -> None:
             text = str(row[col])
             draw.text((x, y), text, fill="black", font=font)
             x += width * 10  # Множитель 10 для более читаемого изображения
-        y += 30  # Высота строки
+        y += 30
         x = 10
-    # Сохраняем изображение
     image.save(img)
 
 
 # pull schedule of day from dataframe
 async def format_schedule(schedule, schedule_day) -> pd.DataFrame:
-    # получаем номер нужного дня
+    # got schedule for day
     day_number = schedule[4 + schedule_day].fillna('-').iloc[:, 1:]
     return day_number
 
@@ -229,11 +239,9 @@ async def turn_schedule_pin(callback_query: CallbackQuery) -> None:
     await send_status(chat_id)
 
 
-async def update_schedule(chat_id, schedule_day) -> list:
+async def update_schedule(chat_id, schedule_day, cls) -> list:
     """ update schedule from site """
-    cls = await db.get_db_data(chat_id, 'school_class')
-    chng = await db.get_db_data(chat_id, 'school_change')
-    site = f"https://lyceum.tom.ru/raspsp/index.php?k={cls}&s={chng}"
+    site = f"https://lyceum.tom.ru/raspsp/index.php?k={cls[:-1]}&s={cls[-1]}"
 
     try:
         # get schedule. ptcp154 encoding work too
@@ -282,13 +290,26 @@ async def schedule_for_day(query: CallbackQuery) -> None:
 
     if query.data == 'schedule_for_day_menu':
         await send_status(chat_id, reply_markup=kb.schedule_for_day())
-
     else:
-        await send_status(chat_id)
+        if query.data.startswith('set'):
+            callback_prefix = 'set_class_'
+            cls: str = query.data[len(callback_prefix):]
 
-        callback_prefix = 'schedule_for_day_'
-        day = int(query.data[len(callback_prefix):])
-        await send_schedule(chat_id, now=1, day=day)
+            # add school change to the end of class number
+            if cls[-1] in second_change_nums:
+                cls += '2'
+            else:
+                cls += '1'
+
+            await send_status(chat_id)
+            await send_schedule(chat_id, now=1, cls=cls)
+
+        else:
+            callback_prefix = 'schedule_for_day_'
+            day: int = int(query.data[len(callback_prefix):])
+
+            await send_status(chat_id)
+            await send_schedule(chat_id, now=1, day=day)
 
 
 async def pin_schedule(chat_id, schedule_msg_id) -> None:
@@ -301,20 +322,6 @@ async def pin_schedule(chat_id, schedule_msg_id) -> None:
             custom_logger.critical(chat_id, f'<y>pin error: <r>{e}</></>')
             if "not enough rights to manage pinned messages" in str(e):
                 await not_enough_rights_to_pin(chat_id)
-
-
-async def schedule_time_filter() -> bool:
-    local_date = datetime.now(local_timezone)
-    hour = local_date.hour
-    month = local_date.month
-
-    if hour < 6:
-        return False
-
-    if month in [6, 7, 8]:
-        return False
-
-    return True
 
 
 async def turn_deleting(callback_query: CallbackQuery) -> None:

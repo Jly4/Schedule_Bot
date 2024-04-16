@@ -39,13 +39,35 @@ class DatabaseClass:
         )
         ''')
 
+        # create main_table sheet
+        self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS bot_parameters (
+        count INTEGER PRIMARY KEY,
+        suspend_date TEXT DEFAULT '',
+        suspend_bot INTEGER DEFAULT 0
+        )
+        ''')
+
         # create index for chat_id column
         self.cursor.execute('''
         CREATE INDEX IF NOT EXISTS
         idx_chat_id ON user_data (chat_id)
         ''')
-        self.connection.commit()
 
+        # Проверка наличия записей в таблице
+        self.cursor.execute(
+            'SELECT COUNT(*) FROM bot_parameters'
+        )
+        result = self.cursor.fetchone()[0]
+
+        # Если таблица пуста, вставляем новую запись
+        if result == 0:
+            self.cursor.execute(
+                "INSERT INTO bot_parameters (suspend_date) VALUES ('')"
+            )
+
+        self.connection.commit()
+        
     # save db
     async def commit(self):
         self.connection.commit()
@@ -53,8 +75,8 @@ class DatabaseClass:
     async def add_new_chat_id(self, chat_id: int) -> None:
         custom_logger.debug(chat_id, '<c>new chat_id</>', depth=2)
 
-        self.cursor.execute('INSERT INTO user_data (chat_id) '
-                            'VALUES (?)', (chat_id,))
+        self.cursor.execute(
+            'INSERT INTO user_data (chat_id) VALUES (?)', (chat_id,))
 
         self.connection.commit()  # save db
 
@@ -91,9 +113,9 @@ class DatabaseClass:
             return
 
         else:
-            from bot.utils.school_classes import choose_class
+            from bot.utils.school_classes import choose_class_number
             await self.add_new_chat_id(chat_id)
-            await choose_class(chat_id)
+            await choose_class_number(chat_id)
 
     async def update_db_data(self, chat_id: int, **kwargs) -> None:
         custom_logger.debug(chat_id, f'update_db_data: <c>{kwargs.keys()}</>')
@@ -110,7 +132,9 @@ class DatabaseClass:
         self.connection.commit()
 
     async def get_user_id_list(self) -> list:
-        self.cursor.execute('SELECT chat_id FROM user_data')
+        self.cursor.execute(
+            'SELECT chat_id FROM user_data'
+        )
 
         user_id_list = [i[0] for i in self.cursor.fetchall()]  # unpack values
 
@@ -120,8 +144,8 @@ class DatabaseClass:
         custom_logger.info(chat_id, '<r>deleting from db</>', depth=2)
 
         self.cursor.execute(f'''
-        DELETE FROM user_data
-        WHERE chat_id = {chat_id};
+            DELETE FROM user_data
+            WHERE chat_id = {chat_id};
         ''')
 
         self.connection.commit()
@@ -132,6 +156,53 @@ class DatabaseClass:
         msg_id = await self.get_db_data(chat_id, 'last_status_message_id')
 
         return msg_id
+
+    ''' bot_parameters table
+    '''
+    async def turn_suspend_bot(self, user_id: int) -> None:
+        custom_logger.debug(user_id, depth=1)
+
+        self.cursor.execute('SELECT suspend_bot FROM bot_parameters')
+        suspend_bot = self.cursor.fetchall()[0][0]
+
+        if suspend_bot:
+            suspend_bot = 0
+        else:
+            suspend_bot = 1
+
+        self.cursor.execute(f'''
+            UPDATE bot_parameters
+            SET suspend_bot = {suspend_bot}
+            WHERE count = '1'
+        ''')
+
+        self.connection.commit()
+
+    async def get_dev_data(self, *args) -> Union[int, tuple]:
+        self.cursor.execute(f'''
+                SELECT {", ".join(args)}
+                FROM bot_parameters
+                WHERE count = '1'
+        ''')
+
+        data_tuple: tuple = self.cursor.fetchall()[0]
+        # if only one value, unpack it from tuple
+        if len(data_tuple) > 1:
+            return data_tuple
+        else:
+            return data_tuple[0]
+
+    async def update_dev_data(self, **kwargs) -> None:
+        set_args = ", ".join(f"{key} = ?" for key in kwargs)
+        values = tuple(kwargs.values())
+
+        self.cursor.execute(f'''
+            UPDATE bot_parameters
+            SET {set_args}
+            WHERE count = '1'
+        ''', values)
+
+        self.connection.commit()
 
 
 db = DatabaseClass('bot/database/bot_data.db')

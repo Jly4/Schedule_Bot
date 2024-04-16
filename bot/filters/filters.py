@@ -1,4 +1,6 @@
+import pytz
 import asyncio
+from datetime import datetime
 from typing import Union
 
 from aiogram.types import Message, CallbackQuery
@@ -7,6 +9,18 @@ from aiogram.filters import BaseFilter
 from main import bot
 from bot.utils.utils import del_msg_by_id
 from bot.logs.log_config import custom_logger
+from bot.config.config import dev_id
+from bot.database.database import db
+
+local_timezone = pytz.timezone('Asia/Tomsk')
+
+
+class IsDev(BaseFilter):
+    async def __call__(self, query: Message):
+        if str(query.from_user.id) == dev_id:
+            return True
+        else:
+            return False
 
 
 class IsAdmin(BaseFilter):
@@ -58,3 +72,56 @@ async def get_admins_id_list(chat_id: int, chat_type: str) -> list:
         custom_logger.debug(chat_id, f'<y>admin_list: <r>{admins_list}</></>')
 
         return admins_list
+
+
+class AutoSendFilter:
+    def __init__(self, chat_id: int):
+        self.chat_id = chat_id
+
+    async def filter(self) -> int:
+        if await self.bot_and_autosend():
+            return 0
+
+        if await db.get_dev_data('suspend_bot'):
+            return 1
+
+        if not await self.time_filter():
+            return 1
+
+        return 2
+
+    async def bot_and_autosend(self) -> int:
+        conditions = await db.get_db_data(
+            self.chat_id,
+            'schedule_auto_send',
+            'bot_enabled'
+        )
+
+        if not (conditions[0] and conditions[1]):
+            custom_logger.debug(
+                self.chat_id,
+                f'cond: {conditions[0], conditions[1]}')
+
+            return False
+
+    @staticmethod
+    async def time_filter() -> int:
+        local_date = datetime.now(local_timezone)
+        hour = local_date.hour
+        month = local_date.month
+        formatted_date = local_date.strftime("%d.%m.%y")
+        dates_str = await db.get_dev_data('suspend_date')
+        dates = set(dates_str.split(', '))
+
+        if hour < 6:
+            return False
+
+        if month in [6, 7, 8]:
+            return False
+
+        if formatted_date in dates:
+            custom_logger.debug(msg='suspended by date')
+            return False
+
+        return True
+

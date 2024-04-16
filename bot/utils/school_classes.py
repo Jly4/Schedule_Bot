@@ -7,23 +7,30 @@ from bot.utils.status import send_status
 from bot.keyboards import keyboards as kb
 from bot.utils.schedule import send_schedule
 from bot.utils.messages import del_msg_by_db_name
-from bot.config.config import classes_dict, second_change_classes_nums
+from bot.config.config import classes_dict, second_change_nums
 
 
-async def choose_class(chat_id: int) -> None:
+async def choose_class_number(chat_id: int) -> None:
     msg = 'Выберите цифру класса'
-    await send_status(chat_id, msg, reply_markup=kb.choose_class_num())
+    await send_status(
+        chat_id=chat_id,
+        text=msg,
+        reply_markup=kb.choose_class_number()
+    )
 
 
-async def set_class_number(callback_query: CallbackQuery) -> None:
+async def choose_class_letter(callback_query: CallbackQuery) -> None:
     chat_id = callback_query.message.chat.id
     prefix = 'class_number_'  # callback prefix
     callback = callback_query.data[len(prefix):]  # delete prefix
     school_class = callback
+
     msg = 'Выберите букву класса'
-    await send_status(chat_id=chat_id,
-                      text=msg,
-                      reply_markup=kb.choose_class_letter(school_class))
+    await send_status(
+        chat_id=chat_id,
+        text=msg,
+        reply_markup=kb.choose_class_letter(school_class)
+    )
 
 
 async def set_class(callback_query: CallbackQuery) -> None:
@@ -34,7 +41,7 @@ async def set_class(callback_query: CallbackQuery) -> None:
 
     await db.update_db_data(chat_id, school_class=school_class)
 
-    if class_number in second_change_classes_nums:
+    if class_number in second_change_nums:
         await db.update_db_data(chat_id, school_change=2)
 
     else:

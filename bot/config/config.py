@@ -4,11 +4,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 token = os.getenv("token")
+dev_id = os.getenv("dev_id")
 
-# Put your token in the /bot/config/.env file as follows:
+# Put your token and dev_id in the /bot/config/.env file
 if token is None:
     raise Exception("token not exist in .env"
-                    "check where you place .env it must be in"
+                    "check where you place .env. It must be in"
+                    "/bot/config/.env")
+
+if dev_id is None:
+    raise Exception("dev_id not exist in .env"
+                    "check where you place .env. It must be in"
                     "/bot/config/.env")
 
 # Auto send delay in min
@@ -37,4 +43,4 @@ classes_dict = {
 }
 
 # list with second change classes
-second_change_classes_nums = ['2', '4']
+second_change_nums = ['2', '4']

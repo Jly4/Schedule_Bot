@@ -18,46 +18,52 @@ from bot.utils.messages import del_msg_by_db_name, del_msg_by_id
 async def run_bot_tasks():
     loguru_config()  # load loguru config
     await db.database_init()
+    chat_id_list = await get_active_user_list()
 
-    chat_id_list = await db.get_user_id_list()
     if not chat_id_list:
         return
 
     for chat_id in chat_id_list:
-        # if user have disabled bot
+        await run_task_if_disabled(chat_id, 'schedule_auto_send')
+
+
+async def get_active_user_list() -> list:
+    """ true if the user was received a schedule for the last 90 days """
+    active_user_list = []
+    chat_id_list = await db.get_user_id_list()
+
+    for chat_id in chat_id_list:
         bot_enabled = await db.get_db_data(chat_id, 'bot_enabled')
+        active_time = await db.get_db_data(chat_id, 'last_print_time')
+
         if not bot_enabled:
             custom_logger.info(chat_id, "<y>user was disable bot</>")
             continue
 
-        # if user hasn't received schedule for 90 last days
-        user_active = await user_is_active(chat_id)
-        if user_active:
-            await run_task_if_disabled(chat_id, 'schedule_auto_send')
-        else:
+        if active_time == 'еще не проверялось':
+            active_user_list.append(chat_id)
+            continue
+
+        datetime_format = datetime.strptime(active_time, '%d.%m.%Y. %H:%M:%S')
+        difference = datetime.now() - datetime_format
+
+        if difference.days > 90:
+            custom_logger.info(chat_id, '<r>User was inactive in 90days</>')
             await db.delete_chat_id(chat_id)
 
+        custom_logger.debug(chat_id, 'user is active')
+        active_user_list.append(chat_id)
 
-async def user_is_active(chat_id: int) -> bool:
-    """ true if the user was received a schedule for the last 90 days """
-    active_time = await db.get_db_data(chat_id, 'last_print_time')
-    if active_time == 'еще не проверялось':
-        return True
-
-    datetime_format = datetime.strptime(active_time, '%d.%m.%Y. %H:%M:%S')
-    difference = datetime.now() - datetime_format
-
-    if difference.days > 90:
-        custom_logger.info(chat_id, '<r>User was inactive in last 90days</>')
-        return False
-    custom_logger.debug(chat_id, 'user is active')
-    return True
+    return active_user_list
 
 
-async def settings(chat_id: int) -> None:
+async def settings(query: CallbackQuery) -> None:
+    user_id = query.from_user.id
+    chat_id = query.message.chat.id
     custom_logger.debug(chat_id)
+
     from bot.utils.status import send_status
-    await send_status(chat_id, edit=1, reply_markup=kb.settings())
+    await send_status(chat_id, edit=1, reply_markup=kb.settings(user_id))
 
 
 async def disable_bot(query: Union[CallbackQuery, Message]) -> None:
@@ -89,8 +95,12 @@ async def start_command(message: Message) -> None:
     if chat_id not in user_id_list:  # check chat_id in db
         await db.add_new_chat_id(chat_id)  # add chat_id to db
         msg = 'Выберите цифру класса'
-        await send_status(chat_id, msg, edit=0,
-                          reply_markup=kb.choose_class_num())
+        await send_status(
+            chat_id=chat_id,
+            text=msg,
+            edit=0,
+            reply_markup=kb.choose_class_number()
+        )
 
     else:
         await db.update_db_data(chat_id, bot_enabled=1)
@@ -166,19 +176,28 @@ async def del_pin_message(message: Message) -> None:
 
 async def description(chat_id) -> None:
     msg = (
-        'Как работает автоматическое обновление расписание:\n\n- В будние дни '
+        'Как работает автоматическое обновление расписания:\n\n- В будние дни '
         'расписание может быть отправлено на текущий день и на завтра.\n- На '
-        'текущий день оно может быть отправлено если расписание было '
+        'текущий день оно может быть отправлено, если расписание было '
         'изменено на текущий день и сейчас до 15 часов.\n- На завтра оно '
         'может быть отправлено, если расписание на завтра было изменено, '
         'и сейчас больше 15 часов.\nЕсли расписание на завтра не было '
         'изменено, оно отправится в 20 часов.\n- В субботу расписание может '
-        'быть отправлено только если оно изменилось на субботу и сейчас '
+        'быть отправлено только, если оно изменилось на субботу и сейчас '
         'меньше 11 часов.\n- В воскресенье расписание будет отправлено '
-        'в 20 часов.\n\nВопросы и предложения по кнопке ниже:'
+        'в 20 часов и позже при изменении.\n\n'
+        '- С 00 до 06 часов бот не будет в автоматическом режим проверять '
+        'изменение расписания и обновлять статус, но расписание все еще '
+        'может быть получено через кнопку "расписание". \n\n'
+        'Вопросы и предложения по кнопке ниже:'
     )
 
     await send_status(
         chat_id=chat_id,
         text=msg,
-        reply_markup=kb.description())
+        reply_markup=kb.description()
+    )
+
+
+
+
