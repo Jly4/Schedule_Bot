@@ -166,6 +166,7 @@ def auto_update_settings() -> InlineKeyboardMarkup:
     buttons = {
         'turn_autosend': 'Вкл/Выкл',
         'edit_threads': 'Добавить/Удалить класс',
+        'description': 'Как работает автообновление',
         'settings': 'Назад'
     }
 

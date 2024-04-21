@@ -344,7 +344,7 @@ async def turn_deleting(callback_query: CallbackQuery) -> None:
 
         txt = 'Автоматическое удаление предыдущего расписания выключено'
         await send_status(chat_id, text=txt, reply_markup=None)
-        await asyncio.sleep(2.5)
+        await asyncio.sleep(3.5)
         await send_status(chat_id)
 
     else:
@@ -352,7 +352,7 @@ async def turn_deleting(callback_query: CallbackQuery) -> None:
 
         txt = 'Автоматическое удаление предыдущего расписания включено'
         await send_status(chat_id, text=txt, reply_markup=None)
-        await asyncio.sleep(2.5)
+        await asyncio.sleep(3.5)
         await send_status(chat_id)
 
 

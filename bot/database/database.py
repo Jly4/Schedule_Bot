@@ -1,6 +1,6 @@
 import sqlite3
 
-from typing import Union, Optional
+from typing import Union
 
 from bot.logs.log_config import custom_logger
 
@@ -19,7 +19,7 @@ class DatabaseClass:
         chat_id INTEGER NOT NULL,
         schedule_auto_send INTEGER DEFAULT 0 NOT NULL,
         bot_enabled INTEGER DEFAULT 1 NOT NULL,
-        school_class TEXT DEFAULT 'b11',
+        school_class TEXT DEFAULT 'b111',
         schedule_json TEXT DEFAULT '',
         del_old_schedule INTEGER DEFAULT 1,
         pin_schedule_message INTEGER DEFAULT 1,

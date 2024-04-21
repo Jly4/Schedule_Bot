@@ -102,7 +102,7 @@ async def suspend_date_guide(query: CallbackQuery) -> None:
         parse_mode='MarkDown'
     )
 
-    await asyncio.sleep(20)
+    await asyncio.sleep(10)
     await del_msg_by_id(query.message.chat.id, msg.message_id)
 
 

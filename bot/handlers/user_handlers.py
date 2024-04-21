@@ -19,7 +19,8 @@ async def pin_schedule_msg(message: Message) -> None:
 
 
 @router.message(Command('status'))
-async def status_msg(message: Message) -> None:
+async def status_msg(message: Message, state: FSMContext) -> None:
+    await state.clear()
     await status_command(message)
 
 
