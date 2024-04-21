@@ -16,10 +16,11 @@ from bot.utils.status import send_status
 from bot.database.database import db
 from bot.logs.log_config import custom_logger
 from bot.exceptions.exceptions import retry_after, not_enough_rights_to_pin
-from bot.config.config import schedule_auto_send_delay, second_change_nums
+from bot.config.config import schedule_auto_send_delay
 from bot.config.config import classes_dict
-from bot.utils.messages import del_msg_by_db_name
-from bot.utils.utils import run_task_if_disabled, old_data_cleaner
+from bot.utils.messages import del_msg_by_id
+from bot.utils.utils import old_data_cleaner
+from bot.utils.utils import add_change_to_class
 from bot.utils.schedule_logic import ScheduleLogic
 from bot.keyboards import keyboards as kb
 from bot.filters.filters import AutoSendFilter
@@ -32,7 +33,7 @@ local_timezone = pytz.timezone('Asia/Tomsk')
 system_type = platform.system()
 
 
-async def schedule_auto_send(chat_id: int):
+async def schedule_auto_send(chat_id: int, cls: str) -> None:
     """
     if autosend filter == 0 > stops cycle
     if autosend filter == 1 > wait while bot will unsuspend
@@ -45,7 +46,7 @@ async def schedule_auto_send(chat_id: int):
     while autosend_filter:
         if autosend_filter == 2:
             await old_data_cleaner()  # clean bot/data folder from old files
-            await send_schedule(chat_id)
+            await send_schedule(chat_id, cls=cls)
 
         await asyncio.sleep(schedule_auto_send_delay * 60)
         autosend_filter = await autosend.filter()
@@ -57,7 +58,7 @@ async def send_schedule(
         day: int = None,
         cls: str = ''
 ) -> None:
-    custom_logger.debug(chat_id, f'<y>now: <r>{now}</></>')
+    custom_logger.debug(chat_id, f'<y>now: <r>{now}</>, cls: <r>{cls}</></>')
     local_date = datetime.now(local_timezone)
     schedule_day = await ScheduleLogic.schedule_day()
 
@@ -65,10 +66,8 @@ async def send_schedule(
     if isinstance(day, int):
         schedule_day = day
 
-    # if argument cls is empty
     if not cls:
-        cls += str(await db.get_db_data(chat_id, 'school_class'))
-        cls += str(await db.get_db_data(chat_id, 'school_change'))
+        cls = str(await db.get_db_data(chat_id, 'school_class'))
 
     # get schedule
     schedule = await update_schedule(chat_id, schedule_day, cls)
@@ -76,7 +75,7 @@ async def send_schedule(
         return
 
     # logic
-    logic = ScheduleLogic(chat_id)
+    logic = ScheduleLogic(chat_id, cls)
     should_send = await logic.should_send()
     custom_logger.debug(chat_id, f'<y>schedule_day: <r>{schedule_day}</></>')
     custom_logger.debug(chat_id, f'<y>should_send: <r>{should_send}</></>')
@@ -84,15 +83,19 @@ async def send_schedule(
     if should_send or now:
         last_print_time = local_date.strftime('%d.%m.%Y. %H:%M:%S')
         # get time change schedule on site
-        change_time = await db.get_db_data(chat_id, 'schedule_change_time')
+        change_time = await db.get_data_by_cls(
+            chat_id,
+            cls,
+            'schedule_change_time'
+        )
         last_printed_change_time = change_time
 
         formatted_schedule = await format_schedule(schedule, schedule_day)
         prev_schedule_json = formatted_schedule.to_json()
         image_path = await schedule_file_name(chat_id, schedule_day)
 
-        await generate_image(chat_id, formatted_schedule, image_path)
-        await del_old_schedule(chat_id)
+        await generate_image(chat_id, formatted_schedule, image_path, cls)
+        await del_old_schedule(chat_id, cls)
 
         txt = await schedule_txt(schedule_day, last_printed_change_time, cls)
         schedule_img = FSInputFile(image_path)
@@ -101,20 +104,23 @@ async def send_schedule(
         if schedule_msg is None:
             return
 
-        data = {
-            'last_schedule_message_id': schedule_msg.message_id,
-            'last_printed_change_time': last_printed_change_time
-        }
-        await db.update_db_data(chat_id, **data)
+        await db.update_data_by_cls(
+            chat_id,
+            cls,
+            last_schedule_message_id=schedule_msg.message_id,
+            last_printed_change_time=last_printed_change_time
+        )
 
     if should_send:
-        data = {
-            'last_print_time_day': schedule_day,
-            'last_print_time_hour': local_date.hour,
-            'last_print_time': last_print_time,
-            'prev_schedule_json': prev_schedule_json
-        }
-        await db.update_db_data(chat_id, **data)
+        await db.update_data_by_cls(
+            chat_id,
+            cls,
+            last_print_time_day=schedule_day,
+            last_print_time_hour=local_date.hour,
+            last_print_time=last_print_time,
+            prev_schedule_json=prev_schedule_json
+        )
+
     await asyncio.sleep(0.5)
     await send_status(chat_id)
 
@@ -161,12 +167,12 @@ async def schedule_txt(schedule_day, last_printed_change_time, cls) -> str:
     return msg
 
 
-async def generate_image(chat_id, formatted_schedule, img) -> None:
+async def generate_image(chat_id, formatted_schedule, img, cls) -> None:
     """ this func generates an image with schedule
     1. if it doesn't exist in data folder
     2. if schedule change_time has been changed on site
     """
-    logic = ScheduleLogic(chat_id)
+    logic = ScheduleLogic(chat_id, cls)
     if not await logic.should_regen_img(img):
         return
 
@@ -266,22 +272,28 @@ async def update_schedule(chat_id, schedule_day, cls) -> list:
     formatted_schedule = await format_schedule(schedule, schedule_day)
     schedule_json = formatted_schedule.to_json()
 
-    data = {
-        'last_check_schedule': last_check_schedule,
-        'schedule_json': schedule_json,
-        'schedule_change_time': schedule_change_time,
-    }
-    await db.update_db_data(chat_id, **data)
+    await db.update_data_by_cls(
+        chat_id,
+        cls,
+        last_check_schedule=last_check_schedule,
+        schedule_json=schedule_json,
+        schedule_change_time=schedule_change_time
+    )
 
     return schedule
 
 
-async def del_old_schedule(chat_id) -> None:
+async def del_old_schedule(chat_id, cls) -> None:
     """ if user have enabled 'del_old_schedule' delete previous schedule """
     del_parameter = await db.get_db_data(chat_id, 'del_old_schedule')
 
     if del_parameter:
-        await del_msg_by_db_name(chat_id, 'last_schedule_message_id')
+        msg_id = await db.get_data_by_cls(
+            chat_id,
+            cls,
+            'last_schedule_message_id'
+        )
+        await del_msg_by_id(chat_id, msg_id)
 
 
 async def schedule_for_day(query: CallbackQuery) -> None:
@@ -291,19 +303,20 @@ async def schedule_for_day(query: CallbackQuery) -> None:
     if query.data == 'schedule_for_day_menu':
         await send_status(chat_id, reply_markup=kb.schedule_for_day())
     else:
-        if query.data.startswith('set'):
+        if query.data.startswith('set_class_'):
             callback_prefix = 'set_class_'
-            cls: str = query.data[len(callback_prefix):]
+            cls = query.data[len(callback_prefix):]
+            cls = await add_change_to_class(cls)
 
-            # add school change to the end of class number
-            if cls[-1] in second_change_nums:
-                cls += '2'
-            else:
-                cls += '1'
+            await send_status(chat_id, reply_markup=kb.schedule_for_day(cls))
+        elif len(query.data) > 18:
+            day_prefix = 'schedule_for_day_'
+            cls_prefix = 'schedule_for_day_0_'
+            day = int(query.data[len(day_prefix):(len(day_prefix) + 1)])
+            cls = query.data[len(cls_prefix):]
 
             await send_status(chat_id)
-            await send_schedule(chat_id, now=1, cls=cls)
-
+            await send_schedule(chat_id, now=1, cls=cls, day=day)
         else:
             callback_prefix = 'schedule_for_day_'
             day: int = int(query.data[len(callback_prefix):])
@@ -340,26 +353,6 @@ async def turn_deleting(callback_query: CallbackQuery) -> None:
         txt = 'Автоматическое удаление предыдущего расписания включено'
         await send_status(chat_id, text=txt, reply_markup=None)
         await asyncio.sleep(2.5)
-        await send_status(chat_id)
-
-
-async def turn_schedule(callback_query: CallbackQuery) -> None:
-    chat_id = callback_query.message.chat.id
-    if await db.get_db_data(chat_id, 'schedule_auto_send'):
-        await db.update_db_data(chat_id, schedule_auto_send=0)
-
-        txt = 'Автоматическое получение расписания выключено'
-        await send_status(chat_id, text=txt, reply_markup=None)
-        await asyncio.sleep(2)
-        await send_status(chat_id)
-
-    else:
-        await db.update_db_data(chat_id, schedule_auto_send=1)
-
-        txt = 'Автоматическое получение расписания включено'
-        await send_status(chat_id, text=txt, reply_markup=None)
-        await asyncio.sleep(2)
-        await run_task_if_disabled(chat_id, 'schedule_auto_send')
         await send_status(chat_id)
 
 

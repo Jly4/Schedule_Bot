@@ -7,7 +7,9 @@ from bot.utils.status import send_status
 from bot.keyboards import keyboards as kb
 from bot.utils.schedule import send_schedule
 from bot.utils.messages import del_msg_by_db_name
-from bot.config.config import classes_dict, second_change_nums
+from bot.config.config import classes_dict
+from bot.utils.utils import add_change_to_class
+from bot.utils.autosend_menu import del_cls_from_threads
 
 
 async def choose_class_number(chat_id: int) -> None:
@@ -37,17 +39,17 @@ async def set_class(callback_query: CallbackQuery) -> None:
     chat_id = callback_query.message.chat.id
     prefix = 'set_class_'  # callback prefix
     school_class = callback_query.data[len(prefix):]  # delete prefix
-    class_number = school_class[-1]
+
+    threads = await db.get_db_data(chat_id, 'autosend_classes')
+    threads = list(threads.split(', ') if threads else threads)
+    if school_class in threads:
+        await del_cls_from_threads(chat_id, threads, school_class)
+
+    school_class = await add_change_to_class(school_class)
 
     await db.update_db_data(chat_id, school_class=school_class)
 
-    if class_number in second_change_nums:
-        await db.update_db_data(chat_id, school_change=2)
-
-    else:
-        await db.update_db_data(chat_id, school_change=1)
-
-    formatted_class = classes_dict[school_class]
+    formatted_class = classes_dict[school_class[:-1]]
     text = f'Установлен {formatted_class} класс'
     await send_status(chat_id, text=text, reply_markup=None)
     await del_msg_by_db_name(chat_id, 'last_schedule_message_id')

@@ -17,8 +17,10 @@ from bot.utils.utils import get_active_user_list
 async def dev_settings(query: Union[Message, CallbackQuery]) -> None:
     if type(query) is CallbackQuery:
         chat_id = query.message.chat.id  # get chat_id
+        edit = 1
     else:
         chat_id = query.chat.id
+        edit = 0
         await del_msg_by_id(chat_id, query.message_id, 'dev_settings')
 
     custom_logger.debug(chat_id)
@@ -34,6 +36,7 @@ async def dev_settings(query: Union[Message, CallbackQuery]) -> None:
     await send_status(
         chat_id,
         text=txt,
+        edit=edit,
         reply_markup=kb.dev_settings()
     )
 
@@ -138,9 +141,6 @@ async def format_dates(dates: set, new_date: str) -> set:
     else:
         dates |= set(new_date)
 
-    print(new_date, dates)
-    print(new_date, dates)
-    print(new_date, dates)
     return dates
 
 

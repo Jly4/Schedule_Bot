@@ -94,8 +94,9 @@ async def resend_status(args: dict, clean: int = 0) -> None:
             disable_notification=True
         )
         # update status id
-        data = {'last_status_message_id': status_msg.message_id}
-        await db.update_db_data(chat_id, **data)
+        msg_id = status_msg.message_id
+        await db.update_db_data(chat_id, last_status_message_id=msg_id)
+
         custom_logger.debug(chat_id, '<y>status successful sent</>')
 
         if clean:
@@ -116,20 +117,23 @@ async def resend_status(args: dict, clean: int = 0) -> None:
 
 
 async def status_message_text(chat_id: int) -> str:
-    settings = await db.get_db_data(
+    data = await db.get_db_data(
         chat_id,
         'pin_schedule_message',
         'schedule_auto_send',
         'school_class',
+    )
+    pin_schedule_message, schedule_auto_send, school_class, = data
+
+    data = await db.get_data_by_cls(
+        chat_id,
+        school_class,
         'last_printed_change_time',
         'last_check_schedule'
     )
+    last_printed_change_time, last_check_schedule = data
 
-    # save settings into variables
-    pin_schedule_message, schedule_auto_send, school_class, \
-        last_printed_change_time, last_check_schedule = settings
-
-    formatted_class = classes_dict[school_class]
+    formatted_class = classes_dict[school_class[:-1]]
     if schedule_auto_send:
         auto_send_msg = '🟢 Включена, проверка выполняется раз в 10 минут'
     else:

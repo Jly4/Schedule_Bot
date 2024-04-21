@@ -17,7 +17,7 @@ def main() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def schedule_for_day() -> InlineKeyboardMarkup:
+def schedule_for_day(cls=0) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     buttons = {
         'schedule_for_day_0': 'Понедельник',
@@ -26,11 +26,17 @@ def schedule_for_day() -> InlineKeyboardMarkup:
         'schedule_for_day_3': 'Четверг',
         'schedule_for_day_4': 'Пятница',
         'schedule_for_day_5': 'Суббота',
-        'choose_class': 'Другой класс',
-        'status': 'Назад'
     }
     for callback, text in buttons.items():
+        if cls:
+            callback += f'_{cls}'
         kb.button(text=text, callback_data=callback).adjust(3)
+
+    if not cls:
+        kb.button(text='Другой класс', callback_data='choose_class')
+        kb.button(text='Назад', callback_data='status').adjust(3)
+    else:
+        kb.button(text='Назад', callback_data='schedule_for_day_menu').adjust(3)
 
     return kb.as_markup()
 
@@ -40,7 +46,7 @@ def settings(*user_id: int) -> InlineKeyboardMarkup:
 
     buttons = {
         'set_class': 'Изменить класс',
-        'schedule_auto_send': 'Обновление расписания',
+        'autosend': 'Обновление расписания',
         'pin_schedule': 'Закреплять расписание',
         'color_menu': 'Изменить цвет расписания',
         'schedule_auto_delete': 'Удалять предыдущее расписание',
@@ -104,7 +110,7 @@ def choose_class_letter(class_number) -> InlineKeyboardMarkup:
             callback = f'set_class_{school_class}'
             kb.button(text=text, callback_data=callback).adjust(3)
 
-    kb.button(text='Назад', callback_data='choose_class').adjust(3)
+    kb.button(text='Назад', callback_data='set_class').adjust(3)
     return kb.as_markup()
 
 
@@ -145,6 +151,21 @@ def dev_settings() -> InlineKeyboardMarkup:
         'announce_guide': 'Рассылка',
         'suspend_date_guide': 'Даты приостановки',
         'suspend_bot': 'Приостановить бота',
+        'settings': 'Назад'
+    }
+
+    for callback, text in buttons.items():
+        kb.button(text=text, callback_data=callback).adjust(2)
+
+    return kb.as_markup()
+
+
+def auto_update_settings() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+
+    buttons = {
+        'turn_autosend': 'Вкл/Выкл',
+        'edit_threads': 'Добавить/Удалить класс',
         'settings': 'Назад'
     }
 

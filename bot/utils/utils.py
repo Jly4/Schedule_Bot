@@ -10,8 +10,8 @@ from main import bot
 from bot.utils.status import send_status
 from bot.keyboards import keyboards as kb
 from bot.database.database import db as db
-from bot.logs.log_config import custom_logger
-from bot.logs.log_config import loguru_config
+from bot.logs.log_config import custom_logger, loguru_config
+from bot.config.config import second_change_nums
 from bot.utils.messages import del_msg_by_db_name, del_msg_by_id
 
 
@@ -24,7 +24,12 @@ async def run_bot_tasks():
         return
 
     for chat_id in chat_id_list:
-        await run_task_if_disabled(chat_id, 'schedule_auto_send')
+        # noinspection PyAsyncCall
+        asyncio.create_task(run_task_if_disabled(
+            chat_id,
+            'schedule_auto_send')
+        )
+        await asyncio.sleep(5)
 
 
 async def get_active_user_list() -> list:
@@ -33,14 +38,19 @@ async def get_active_user_list() -> list:
     chat_id_list = await db.get_user_id_list()
 
     for chat_id in chat_id_list:
+        school_class = await db.get_db_data(chat_id, 'school_class')
         bot_enabled = await db.get_db_data(chat_id, 'bot_enabled')
-        active_time = await db.get_db_data(chat_id, 'last_print_time')
+        active_time = await db.get_data_by_cls(
+            chat_id,
+            school_class,
+            'last_print_time'
+        )
 
         if not bot_enabled:
             custom_logger.info(chat_id, "<y>user was disable bot</>")
             continue
 
-        if active_time == 'еще не проверялось':
+        if active_time == '':
             active_user_list.append(chat_id)
             continue
 
@@ -121,28 +131,55 @@ async def status_command(message: Message) -> None:
     await del_msg_by_id(chat_id, message.message_id, 'status command')
 
 
-async def run_task_if_disabled(chat_id: int, task_name: str) -> None:
+async def task_already_run(chat_id, task_name) -> bool:
     all_tasks = asyncio.all_tasks()
-    task_name_with_id = f'{chat_id}_{task_name}'
 
     for task in all_tasks:
-        if task.get_name() == task_name_with_id and not task.done():
+        if task.get_name() == task_name and not task.done():
             custom_logger.debug(
                 chat_id,
                 f'<y>task: <r>{task_name} </> already running</>'
             )
-            return
+            return True
+    return False
 
+
+async def run_task_if_disabled(chat_id: int, task: str) -> None:
+    """
+
+    :param chat_id: number of user id
+    :param task:  class which the user as extra thread
+    to get updates for schedule
+    """
+    threads = await db.get_db_data(chat_id, 'autosend_classes')
+    cls = await db.get_db_data(chat_id, 'school_class')
+    threads = list(threads.split(', ') if threads else threads)
+    threads.append(cls)  # clear class from change and add to a thread list
+    threads.sort(reverse=True)
+
+    # if user have disabled autosend feature
     if not await db.get_db_data(chat_id, 'schedule_auto_send'):
-        custom_logger.debug(chat_id, f'<y>task: <r>{task_name} </>disabled</>')
+        custom_logger.debug(chat_id, f'<y>task: <r>{task} </>disabled</>')
         return
-    custom_logger.debug(chat_id, f'<y>task: <r>{task_name} </>starting</>')
 
-    if task_name == 'schedule_auto_send':
-        from bot.utils.schedule import schedule_auto_send
-        asyncio.create_task(schedule_auto_send(chat_id), name=task_name_with_id)
-    else:
-        custom_logger.error(chat_id, f'<y>Wrong task: <r>{task_name}</></>')
+    for thread in threads:
+        task_name = f'{chat_id}_{task}_{thread}'
+
+        if await task_already_run(chat_id, task_name):
+            continue
+
+        custom_logger.debug(chat_id, f'<y>task: <r>{task_name} </>starting</>')
+        if task == 'schedule_auto_send':
+            from bot.utils.schedule import schedule_auto_send
+            # noinspection PyAsyncCall
+            asyncio.create_task(
+                schedule_auto_send(chat_id, thread),
+                name=task_name
+            )
+        else:
+            custom_logger.error(chat_id, f'<y>Wrong task: <r>{task}</></>')
+
+        await asyncio.sleep(60)
 
 
 async def old_data_cleaner() -> None:
@@ -197,6 +234,15 @@ async def description(chat_id) -> None:
         text=msg,
         reply_markup=kb.description()
     )
+
+
+async def add_change_to_class(school_class: str) -> str:
+    if school_class[1:] in second_change_nums:
+        school_class += '2'
+    else:
+        school_class += '1'
+
+    return school_class
 
 
 

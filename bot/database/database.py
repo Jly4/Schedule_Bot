@@ -1,6 +1,6 @@
 import sqlite3
 
-from typing import Union
+from typing import Union, Optional
 
 from bot.logs.log_config import custom_logger
 
@@ -20,22 +20,20 @@ class DatabaseClass:
         schedule_auto_send INTEGER DEFAULT 0 NOT NULL,
         bot_enabled INTEGER DEFAULT 1 NOT NULL,
         school_class TEXT DEFAULT 'b11',
-        school_change INTEGER DEFAULT 1,
         schedule_json TEXT DEFAULT '',
         del_old_schedule INTEGER DEFAULT 1,
         pin_schedule_message INTEGER DEFAULT 1,
         last_status_message_id INTEGER DEFAULT 1,
-        last_schedule_message_id INTEGER DEFAULT 0,
-        last_settings_message_id INTEGER DEFAULT 0,
+        last_schedule_message_id TEXT DEFAULT '',
         schedule_change_time TEXT DEFAULT '',
-        last_user_activity_time TEXT DEFAULT '',
-        last_print_time TEXT DEFAULT 'еще не проверялось',
-        last_printed_change_time TEXT DEFAULT 'еще не проверялось',
-        last_check_schedule TEXT DEFAULT 'еще не проверялось',
-        last_print_time_day INTEGER DEFAULT 0,
-        last_print_time_hour INTEGER DEFAULT 0,
+        last_print_time TEXT DEFAULT '',
+        last_printed_change_time TEXT DEFAULT '',
+        last_check_schedule TEXT DEFAULT '',
+        last_print_time_day TEXT DEFAULT '',
+        last_print_time_hour TEXT DEFAULT '',
         prev_schedule_json TEXT DEFAULT '',
-        schedule_bg_color TEXT DEFAULT '255,255,143'
+        schedule_bg_color TEXT DEFAULT '255,255,143',
+        autosend_classes TEXT DEFAULT ''
         )
         ''')
 
@@ -80,7 +78,11 @@ class DatabaseClass:
 
         self.connection.commit()  # save db
 
-    async def get_db_data(self, chat_id: int, *args: str) -> Union[tuple, int]:
+    async def get_db_data(
+            self,
+            chat_id: int,
+            *args: str
+    ) -> Union[tuple, int, str]:
         custom_logger.debug(chat_id, f'get_db_data: <c>{args}</>', depth=2)
 
         self.cursor.execute(f'''
@@ -118,6 +120,12 @@ class DatabaseClass:
             await choose_class_number(chat_id)
 
     async def update_db_data(self, chat_id: int, **kwargs) -> None:
+        """ update data in db by column name, where chat_id in db == chat_id
+
+        :param chat_id: telegram chat id
+        :param kwargs: column_name: 'data'
+        :return: None
+        """
         custom_logger.debug(chat_id, f'update_db_data: <c>{kwargs.keys()}</>')
 
         set_args = ", ".join(f"{key} = ?" for key in kwargs)
@@ -157,8 +165,47 @@ class DatabaseClass:
 
         return msg_id
 
-    ''' bot_parameters table
-    '''
+    async def get_data_by_cls(
+            self,
+            chat_id: int,
+            cls: str,
+            *args: str
+    ) -> Union[str, int, tuple]:
+        data = await self.get_db_data(chat_id, *args)
+        data = data if isinstance(data, tuple) else (data, )
+        dict_lis = [eval(str_dict) if str_dict else {} for str_dict in data]
+
+        if len(dict_lis) > 1:
+            return tuple(dct.get(cls, '') for dct in dict_lis)
+
+        else:
+            return dict_lis[0].get(cls, '')
+
+    async def update_data_by_cls(
+            self,
+            chat_id: int,
+            cls: str,
+            **kwargs: dict
+    ) -> None:
+        args = [key for key in kwargs]
+        data = await self.get_db_data(chat_id, *args)
+        data = data if isinstance(data, tuple) else (data, )
+
+        dict_lis = [eval(str_dict) if str_dict else {} for str_dict in data]
+        values = tuple(kwargs.values())
+        keys = tuple(kwargs.keys())
+
+        for i in range(len(values)):
+            dict_lis[i][cls] = values[i]
+
+        res_dict = dict.fromkeys(keys)
+        for i, key in enumerate(keys):
+            res_dict[key] = f'{dict_lis[i]}'
+
+        await self.update_db_data(chat_id, **res_dict)
+
+    """ bot_parameters table
+    """
     async def turn_suspend_bot(self, user_id: int) -> None:
         custom_logger.debug(user_id, depth=1)
 

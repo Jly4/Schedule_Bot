@@ -9,8 +9,9 @@ local_timezone = pytz.timezone('Asia/Tomsk')
 
 
 class ScheduleLogic:
-    def __init__(self, chat_id: int):
+    def __init__(self, chat_id: int, cls: str):
         self.chat_id = chat_id
+        self.cls = cls
 
     async def should_regen_img(self, image_path_name: str) -> bool:
         """ if schedule should be regenerated
@@ -135,8 +136,13 @@ class ScheduleLogic:
         """ returns True if the last automatically printed schedule
             is different from the current one
         """
-        data_name = ['schedule_json', 'prev_schedule_json']
-        data = await db.get_db_data(self.chat_id, *data_name)
+        data = await db.get_data_by_cls(
+            self.chat_id,
+            self.cls,
+            'schedule_json',
+            'prev_schedule_json'
+        )
+
         custom_logger.debug(msg=f'\n{data[0]}\n{data[1]}')
 
         if data[0] != data[1]:
@@ -148,8 +154,12 @@ class ScheduleLogic:
 
     async def time_changed(self) -> bool:
         """ return True if time of change updated on site """
-        data_name = ['schedule_change_time', 'last_printed_change_time']
-        data = await db.get_db_data(self.chat_id, *data_name)
+        data = await db.get_data_by_cls(
+            self.chat_id,
+            self.cls,
+            'schedule_change_time',
+            'last_printed_change_time'
+        )
 
         schedule_change_time = data[0]
         last_printed_change_time = data[1]
@@ -166,8 +176,11 @@ class ScheduleLogic:
         local_date = datetime.now(local_timezone)
         tomorrow = (local_date.weekday() + 1) % 7
 
-        data_name = ['last_print_time_day', ]
-        last_print_day = await db.get_db_data(self.chat_id, *data_name)
+        last_print_day = await db.get_data_by_cls(
+            self.chat_id,
+            self.cls,
+            'last_print_time_day'
+        )
         custom_logger.debug(self.chat_id, f'last_print_day {last_print_day}')
 
         if last_print_day == tomorrow:
@@ -182,8 +195,11 @@ class ScheduleLogic:
         local_date = datetime.now(local_timezone)
         today = local_date.day
 
-        data_name = ['last_print_time_day', ]
-        last_print_day = await db.get_db_data(self.chat_id, *data_name)
+        last_print_day = await db.get_data_by_cls(
+            self.chat_id,
+            self.cls,
+            'last_print_time_day'
+        )
 
         if last_print_day == today:
             return True
