@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from bot.utils.status import send_status
 from bot.utils.utils import status_command, del_pin_message
 from bot.utils.schedule import schedule_for_day
-from bot.utils.states import ClassState
+from bot.utils.states import MainStates
 from bot.utils.school_classes import choose_class_number
 
 router = Router()
@@ -36,6 +36,6 @@ async def update_schedule_call(query: CallbackQuery) -> None:
 
 @router.callback_query(F.data.startswith('choose_class'))
 async def choose_class_call(query: CallbackQuery, state: FSMContext) -> None:
-    await state.set_state(ClassState.choose_class)
+    await state.set_state(MainStates.choose_class)
     await choose_class_number(query.message.chat.id)
 

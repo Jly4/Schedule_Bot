@@ -14,7 +14,7 @@ from bot.utils.schedule import schedule_for_day
 from bot.utils.school_classes import choose_class_letter, set_class
 from bot.utils.school_classes import choose_class_number
 from bot.utils.autosend_menu import turn_schedule, auto_send_menu, edit_threads
-from bot.utils.states import ClassState, DescriptionState
+from bot.utils.states import MainStates
 
 router = Router()
 
@@ -80,15 +80,20 @@ async def set_color_call(query: CallbackQuery) -> None:
 """
 
 
-@router.callback_query(F.data == 'settings', DescriptionState.autosend_menu)
+@router.callback_query(F.data == 'settings')
+async def settings_call(query: CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(MainStates.set_class)
+    await settings(query)
+
+
+@router.callback_query(F.data == 'back_settings', MainStates.autosend_menu)
 async def settings_call(query: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
     await auto_send_menu(query)
 
 
-@router.callback_query(F.data == 'settings')
-async def settings_call(query: CallbackQuery, state: FSMContext) -> None:
-    await state.set_state(ClassState.set_class)
+@router.callback_query(F.data == 'back_settings')
+async def settings_call(query: CallbackQuery) -> None:
     await settings(query)
 
 
@@ -103,7 +108,7 @@ async def settings_call(query: CallbackQuery) -> None:
 
 @router.callback_query(F.data == 'autosend')
 async def autosend_menu_call(query: CallbackQuery, state: FSMContext) -> None:
-    await state.set_state(DescriptionState.description)
+    await state.set_state(MainStates.description)
     await auto_send_menu(query)
 
 
@@ -124,7 +129,7 @@ async def turn_deleting_call(query: CallbackQuery) -> None:
 
 @router.callback_query(F.data == 'edit_threads')
 async def edit_threads_call(query: CallbackQuery, state: FSMContext) -> None:
-    await state.set_state(ClassState.edit_threads)
+    await state.set_state(MainStates.edit_threads)
     await choose_class_number(query.message.chat.id)
 
 
@@ -137,9 +142,9 @@ async def disable_bot_call(query: CallbackQuery) -> None:
     await disable_bot(query)
 
 
-@router.callback_query(F.data == 'description', DescriptionState.description)
+@router.callback_query(F.data == 'description', MainStates.description)
 async def description_call(query: CallbackQuery, state: FSMContext) -> None:
-    await state.set_state(DescriptionState.autosend_menu)
+    await state.set_state(MainStates.autosend_menu)
     await description(query.message.chat.id)
 
 
@@ -162,13 +167,13 @@ async def choose_class_letter_call(query: CallbackQuery) -> None:
     await choose_class_letter(query)
 
 
-@router.callback_query(F.data.startswith('set_class_'), ClassState.choose_class)
+@router.callback_query(F.data.startswith('set_class_'), MainStates.choose_class)
 async def set_class_call(query: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
     await schedule_for_day(query)
 
 
-@router.callback_query(F.data.startswith('set_class_'), ClassState.edit_threads)
+@router.callback_query(F.data.startswith('set_class_'), MainStates.edit_threads)
 async def set_class_call(query: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
     await edit_threads(query)

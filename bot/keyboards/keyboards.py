@@ -79,7 +79,7 @@ def choose_class_number() -> InlineKeyboardMarkup:
         'class_number_9': '9',
         'class_number_10': '10',
         'class_number_11': '11',
-        'status': 'Назад'
+        'back_settings': 'Назад'
     }
     for callback, text in buttons.items():
         kb.button(text=text, callback_data=callback).adjust(3)
@@ -118,7 +118,7 @@ def description() -> InlineKeyboardMarkup:
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text='@yosqe', url="https://t.me/Yosqe"),
-            InlineKeyboardButton(text='Назад', callback_data='settings')
+            InlineKeyboardButton(text='Назад', callback_data='back_settings')
         ]
     ])
     return kb
@@ -135,7 +135,7 @@ def choose_color() -> InlineKeyboardMarkup:
         'set color 255,204,255 розовый': 'Розовый',
         'set color 192,192,255 фиолетовый': 'Фиолетовый',
         'set color 256,256,256 Белый': 'Белый',
-        'settings': 'Назад'
+        'back_settings': 'Назад'
     }
 
     for callback, text in buttons.items():
@@ -151,7 +151,7 @@ def dev_settings() -> InlineKeyboardMarkup:
         'announce_guide': 'Рассылка',
         'suspend_date_guide': 'Даты приостановки',
         'suspend_bot': 'Приостановить бота',
-        'settings': 'Назад'
+        'back_settings': 'Назад'
     }
 
     for callback, text in buttons.items():
@@ -167,7 +167,7 @@ def auto_update_settings() -> InlineKeyboardMarkup:
         'turn_autosend': 'Вкл/Выкл',
         'edit_threads': 'Добавить/Удалить класс',
         'description': 'Как работает автообновление',
-        'settings': 'Назад'
+        'back_settings': 'Назад'
     }
 
     for callback, text in buttons.items():
