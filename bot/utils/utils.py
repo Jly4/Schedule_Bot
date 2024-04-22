@@ -11,7 +11,7 @@ from bot.utils.status import send_status
 from bot.keyboards import keyboards as kb
 from bot.database.database import db as db
 from bot.logs.log_config import custom_logger, loguru_config
-from bot.config.config import second_change_nums
+from bot.config.config import second_change_nums, classes_dict
 from bot.utils.messages import del_msg_by_db_name, del_msg_by_id
 
 
@@ -82,18 +82,24 @@ async def disable_bot(query: Union[CallbackQuery, Message]) -> None:
     else:
         chat_id = query.chat.id
 
-    chat = await bot.get_chat(chat_id)  # get chat info
-    chat_type = chat.type
+    # clear chat
+    for cls in classes_dict.keys():
+        cls = await add_change_to_class(cls)
+        msg_id = await db.get_data_by_cls(
+            chat_id,
+            cls,
+            'last_schedule_message_id'
+        )
+        await del_msg_by_id(chat_id, msg_id, 'clear_chat')
 
-    if chat_type == 'private':
+    chat = await bot.get_chat(chat_id)
+    if chat.type == 'private':
         status_id = await db.get_status_msg_id(chat_id)
-        for msg_id in range(status_id + 10, status_id - 25, -1):
-            await del_msg_by_id(chat_id, msg_id)
+        # noinspection PyUnboundLocalVariable
+        for msg_id in range(msg_id + 10, status_id - 30, -1):
+            await del_msg_by_id(chat_id, msg_id, 'clear_chat')
 
-    # Удаляем сообщений бота
-    await del_msg_by_db_name(chat_id, 'last_schedule_message_id')
-    await del_msg_by_db_name(chat_id, 'last_status_message_id')
-
+    # disable bot for user
     await db.update_db_data(chat_id, bot_enabled=0)
 
 

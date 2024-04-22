@@ -37,22 +37,29 @@ async def choose_class_letter(callback_query: CallbackQuery) -> None:
 
 async def set_class(callback_query: CallbackQuery) -> None:
     chat_id = callback_query.message.chat.id
-    prefix = 'set_class_'  # callback prefix
-    school_class = callback_query.data[len(prefix):]  # delete prefix
 
+    # get class from callback
+    prefix = 'set_class_'
+    school_class = callback_query.data[len(prefix):]
+
+    # del old class schedule
+    await del_msg_by_db_name(chat_id, 'last_schedule_message_id')
+
+    # get classes threads list and delete new class from it, if exist
     threads = await db.get_db_data(chat_id, 'autosend_classes')
     threads = list(threads.split(', ') if threads else threads)
     if school_class in threads:
         await del_cls_from_threads(chat_id, threads, school_class)
 
+    # add change to school class and update data in a database
     school_class = await add_change_to_class(school_class)
-
     await db.update_db_data(chat_id, school_class=school_class)
 
+    # send a message to user
     formatted_class = classes_dict[school_class[:-1]]
     text = f'Установлен {formatted_class} класс'
     await send_status(chat_id, text=text, reply_markup=None)
-    await del_msg_by_db_name(chat_id, 'last_schedule_message_id')
 
-    await asyncio.sleep(1.5)  # timer
+    # send schedule for new class
+    await asyncio.sleep(1.5)
     await send_schedule(chat_id, now=1)

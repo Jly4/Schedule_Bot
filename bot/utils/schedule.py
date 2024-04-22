@@ -112,6 +112,7 @@ async def send_schedule(
         )
 
     if should_send:
+        # noinspection PyUnboundLocalVariable
         await db.update_data_by_cls(
             chat_id,
             cls,
