@@ -1,5 +1,5 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup
 
 from bot.config.config import classes_dict, dev_id
 
@@ -48,8 +48,8 @@ def settings(*user_id: int) -> InlineKeyboardMarkup:
         'set_class': 'Изменить класс',
         'autosend': 'Обновление расписания',
         'pin_schedule': 'Закреплять расписание',
-        'color_menu': 'Изменить цвет расписания',
         'schedule_auto_delete': 'Удалять предыдущее расписание',
+        'color_menu': 'Изменить цвет расписания',
         'disable_bot': 'Отключить бота',
         'description': 'Информация о боте',
     }
@@ -114,14 +114,21 @@ def choose_class_letter(class_number) -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def description() -> InlineKeyboardMarkup:
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text='@yosqe', url="https://t.me/Yosqe"),
-            InlineKeyboardButton(text='Назад', callback_data='back_settings')
-        ]
-    ])
-    return kb
+def description(main_descript=False) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+
+    buttons = {
+        'autosend_descript': 'Автообновление',
+        'buttons_descript': 'Описание кнопок',
+    }
+
+    if main_descript:
+        for callback, text in buttons.items():
+            kb.button(text=text, callback_data=callback)
+        kb.button(text='Поддержка', url='https://t.me/Yosqe')
+
+    kb.button(text='Назад', callback_data='back_settings').adjust(2)
+    return kb.as_markup()
 
 
 def choose_color() -> InlineKeyboardMarkup:
@@ -166,7 +173,7 @@ def auto_update_settings() -> InlineKeyboardMarkup:
     buttons = {
         'turn_autosend': 'Вкл/Выкл',
         'edit_threads': 'Добавить/Удалить класс',
-        'description': 'Как работает автообновление',
+        'autosend_descript': 'Описание работы',
         'back_settings': 'Назад'
     }
 

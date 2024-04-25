@@ -71,9 +71,18 @@ async def settings(query: CallbackQuery) -> None:
     user_id = query.from_user.id
     chat_id = query.message.chat.id
     custom_logger.debug(chat_id)
+    from bot.utils.status import status_message_text
 
-    from bot.utils.status import send_status
-    await send_status(chat_id, edit=1, reply_markup=kb.settings(user_id))
+    txt = await status_message_text(chat_id, settings=True)
+    status_message_id = await db.get_status_msg_id(chat_id)
+
+    await bot.edit_message_text(
+        chat_id=chat_id,
+        text=txt,
+        message_id=status_message_id,
+        reply_markup=kb.settings(user_id),
+        parse_mode='Markdown'
+    )
 
 
 async def disable_bot(query: Union[CallbackQuery, Message]) -> None:
@@ -215,31 +224,6 @@ async def del_pin_message(message: Message) -> None:
         custom_logger.critical(chat_id, f'<y>pin_id: <r>{pinned_message_id}')
         custom_logger.critical(chat_id, f'<y>message_id: <r>{message_id}')
         custom_logger.critical(message)
-
-
-async def description(chat_id) -> None:
-    msg = (
-        'Как работает автоматическое обновление расписания:\n\n- В будние дни '
-        'расписание может быть отправлено на текущий день и на завтра.\n- На '
-        'текущий день оно может быть отправлено, если расписание было '
-        'изменено на текущий день и сейчас до 15 часов.\n- На завтра оно '
-        'может быть отправлено, если расписание на завтра было изменено, '
-        'и сейчас больше 15 часов.\nЕсли расписание на завтра не было '
-        'изменено, оно отправится в 20 часов.\n- В субботу расписание может '
-        'быть отправлено только, если оно изменилось на субботу и сейчас '
-        'меньше 11 часов.\n- В воскресенье расписание будет отправлено '
-        'в 20 часов и позже при изменении.\n\n'
-        '- С 00 до 06 часов бот не будет в автоматическом режим проверять '
-        'изменение расписания и обновлять статус, но расписание все еще '
-        'может быть получено через кнопку "расписание". \n\n'
-        'Вопросы и предложения по кнопке ниже:'
-    )
-
-    await send_status(
-        chat_id=chat_id,
-        text=msg,
-        reply_markup=kb.description()
-    )
 
 
 async def add_change_to_class(school_class: str) -> str:

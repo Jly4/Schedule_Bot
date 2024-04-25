@@ -19,7 +19,7 @@ from bot.exceptions.exceptions import retry_after, not_enough_rights_to_pin
 from bot.config.config import schedule_auto_send_delay
 from bot.config.config import classes_dict
 from bot.utils.messages import del_msg_by_id
-from bot.utils.utils import old_data_cleaner
+from bot.utils.utils import old_data_cleaner, settings
 from bot.utils.utils import add_change_to_class
 from bot.utils.schedule_logic import ScheduleLogic
 from bot.keyboards import keyboards as kb
@@ -108,6 +108,8 @@ async def send_schedule(
             chat_id,
             cls,
             last_schedule_message_id=schedule_msg.message_id,
+            last_print_time_day=schedule_day,
+            prev_schedule_json=prev_schedule_json,
             last_printed_change_time=last_printed_change_time
         )
 
@@ -116,10 +118,8 @@ async def send_schedule(
         await db.update_data_by_cls(
             chat_id,
             cls,
-            last_print_time_day=schedule_day,
             last_print_time_hour=local_date.hour,
-            last_print_time=last_print_time,
-            prev_schedule_json=prev_schedule_json
+            last_print_time=last_print_time
         )
 
     await asyncio.sleep(0.5)
@@ -228,24 +228,6 @@ async def format_schedule(schedule, schedule_day) -> pd.DataFrame:
     return day_number
 
 
-async def turn_schedule_pin(callback_query: CallbackQuery) -> None:
-    chat_id = callback_query.message.chat.id
-    if await db.get_db_data(chat_id, 'pin_schedule_message'):
-        await db.update_db_data(chat_id, pin_schedule_message=0)
-
-        txt = 'Закрепление сообщений с расписанием выключено'
-        await send_status(chat_id, text=txt, reply_markup=None)
-
-    else:
-        await db.update_db_data(chat_id, pin_schedule_message=1)
-
-        txt = 'Закрепление сообщений с расписанием включено'
-        await send_status(chat_id, text=txt, reply_markup=None)
-
-    await asyncio.sleep(1.5)  # timer
-    await send_status(chat_id)
-
-
 async def update_schedule(chat_id, schedule_day, cls) -> list:
     """ update schedule from site """
     site = f"https://lyceum.tom.ru/raspsp/index.php?k={cls[:-1]}&s={cls[-1]}"
@@ -340,21 +322,25 @@ async def pin_schedule(chat_id, schedule_msg_id) -> None:
 
 async def turn_deleting(callback_query: CallbackQuery) -> None:
     chat_id = callback_query.message.chat.id
+
     if await db.get_db_data(chat_id, 'del_old_schedule'):
         await db.update_db_data(chat_id, del_old_schedule=0)
-
-        txt = 'Автоматическое удаление предыдущего расписания выключено'
-        await send_status(chat_id, text=txt, reply_markup=None)
-        await asyncio.sleep(3.5)
-        await send_status(chat_id)
-
+        await settings(callback_query)
     else:
         await db.update_db_data(chat_id, del_old_schedule=1)
+        await settings(callback_query)
 
-        txt = 'Автоматическое удаление предыдущего расписания включено'
-        await send_status(chat_id, text=txt, reply_markup=None)
-        await asyncio.sleep(3.5)
-        await send_status(chat_id)
+
+async def turn_schedule_pin(callback_query: CallbackQuery) -> None:
+    chat_id = callback_query.message.chat.id
+
+    if await db.get_db_data(chat_id, 'pin_schedule_message'):
+        await db.update_db_data(chat_id, pin_schedule_message=0)
+        await settings(callback_query)
+
+    else:
+        await db.update_db_data(chat_id, pin_schedule_message=1)
+        await settings(callback_query)
 
 
 async def schedule_file_name(chat_id, day) -> str:
@@ -364,3 +350,4 @@ async def schedule_file_name(chat_id, day) -> str:
     img = f'bot/data/schedule_{user_class}_{day}_{color}.png'
 
     return img
+

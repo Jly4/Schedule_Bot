@@ -27,9 +27,12 @@ async def dev_settings(query: Union[Message, CallbackQuery]) -> None:
 
     suspend = await db.get_dev_data('suspend_bot')
     dates = await db.get_dev_data('suspend_date')
+    if not dates:
+        dates = '-'
+
     txt = (
-        '-------Dev Menu------\n'
-        f'Приостановлен: {["Нет", "Да"][suspend]}\n\n'
+        'Dev Menu\n\n'
+        f'Приостановлен: {["🔴", "🟢"][suspend]}\n'
         f'Даты приостановки: \n{dates}'
     )
 

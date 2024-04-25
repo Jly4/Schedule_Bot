@@ -3,7 +3,7 @@ import logging
 
 from loguru import logger
 
-from bot.config.config import console_log_level, schedule_auto_send_delay
+from bot.config.config import console_log_level
 
 
 class InterceptHandler(logging.Handler):
@@ -71,8 +71,6 @@ def loguru_config():
     # Start messages
     logger.opt(colors=True).info('<r>Bot started</>')
     logger.opt(colors=True).info(f'<y>log level: <r>{log_level}</></>')
-    logger.opt(colors=True).info(f'<y>schedule_auto_send_delay = <r>'
-                                 f'{schedule_auto_send_delay}</></>')
 
 
 class CustomLogger:

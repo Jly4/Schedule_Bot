@@ -6,7 +6,8 @@ from aiogram.fsm.context import FSMContext
 from bot.filters.filters import IsAdmin, IsDev
 from bot.utils.colors import color_set_menu, set_bg_color
 from bot.utils.utils import settings, del_msg_by_id, start_command
-from bot.utils.utils import description, disable_bot
+from bot.utils.utils import disable_bot
+from bot.utils.description import Description
 from bot.utils.dev_menu import suspend_date, suspend_bot, suspend_date_guide
 from bot.utils.dev_menu import announce_guide, dev_settings, announce
 from bot.utils.schedule import turn_schedule_pin, turn_deleting
@@ -82,18 +83,7 @@ async def set_color_call(query: CallbackQuery) -> None:
 
 @router.callback_query(F.data == 'settings')
 async def settings_call(query: CallbackQuery, state: FSMContext) -> None:
-    await state.set_state(MainStates.set_class)
-    await settings(query)
-
-
-@router.callback_query(F.data == 'back_settings', MainStates.autosend_menu)
-async def settings_call(query: CallbackQuery, state: FSMContext) -> None:
-    await state.clear()
-    await auto_send_menu(query)
-
-
-@router.callback_query(F.data == 'back_settings')
-async def settings_call(query: CallbackQuery) -> None:
+    await state.set_state(MainStates.settings)
     await settings(query)
 
 
@@ -102,13 +92,31 @@ async def settings_call(query: CallbackQuery) -> None:
     await dev_settings(query)
 
 
+@router.callback_query(F.data == 'back_settings', MainStates.descript_autosend)
+async def settings_call(query: CallbackQuery, state: FSMContext) -> None:
+    await state.clear()
+    await auto_send_menu(query)
+
+
+@router.callback_query(F.data == 'back_settings', MainStates.description)
+async def settings_call(query: CallbackQuery, state: FSMContext) -> None:
+    await state.clear()
+    await Description.main_descript(query.message.chat.id)
+
+
+@router.callback_query(F.data == 'back_settings')
+async def settings_call(query: CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(MainStates.settings)
+    await settings(query)
+
+
 """ schedule handlers
 """
 
 
 @router.callback_query(F.data == 'autosend')
 async def autosend_menu_call(query: CallbackQuery, state: FSMContext) -> None:
-    await state.set_state(MainStates.description)
+    await state.set_state(MainStates.autosend_menu)
     await auto_send_menu(query)
 
 
@@ -142,15 +150,27 @@ async def disable_bot_call(query: CallbackQuery) -> None:
     await disable_bot(query)
 
 
-@router.callback_query(F.data == 'description', MainStates.description)
-async def description_call(query: CallbackQuery, state: FSMContext) -> None:
-    await state.set_state(MainStates.autosend_menu)
-    await description(query.message.chat.id)
-
-
 @router.callback_query(F.data == 'description')
 async def description_call(query: CallbackQuery) -> None:
-    await description(query.message.chat.id)
+    await Description.main_descript(query.message.chat.id)
+
+
+@router.callback_query(F.data == 'buttons_descript')
+async def description_call(query: CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(MainStates.description)
+    await Description.buttons_descript(query.message.chat.id)
+
+
+@router.callback_query(F.data == 'autosend_descript', MainStates.autosend_menu)
+async def description_call(query: CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(MainStates.descript_autosend)
+    await Description.autosend_descript(query.message.chat.id)
+
+
+@router.callback_query(F.data == 'autosend_descript')
+async def description_call(query: CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(MainStates.description)
+    await Description.autosend_descript(query.message.chat.id)
 
 
 """ set class number, letter, and change handlers

@@ -24,16 +24,11 @@ async def auto_send_menu(query: CallbackQuery = 0, chat_id: int = 0) -> None:
     threads.append(cls)
 
     classes = [classes_dict[cls[:-1]] for cls in reversed(threads)]
-
     autosend = await db.get_db_data(chat_id, 'schedule_auto_send')
-    if autosend:
-        autosend = '🟢 Включено'
-    else:
-        autosend = '🔴 Выключено'
 
     txt = (
         'Меню настройки автоматического обновление расписания\n\n'
-        f'Автообновление: {autosend}\n'
+        f'⏳ Автоматическое обновление: {["🔴", "🟢"][autosend]}'
         f'Класс(ы): {", ".join(classes)}'
     )
 

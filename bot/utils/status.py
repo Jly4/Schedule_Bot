@@ -6,7 +6,7 @@ from aiogram import exceptions
 from main import bot
 from bot.database.database import db
 from bot.keyboards import keyboards as kb
-from bot.config.config import classes_dict
+from bot.config.config import classes_dict, schedule_auto_send_delay
 from bot.logs.log_config import custom_logger
 from bot.exceptions.exceptions import retry_after
 from bot.utils.messages import del_msg_by_db_name, clear_chat
@@ -116,14 +116,16 @@ async def resend_status(args: dict, clean: int = 0) -> None:
         custom_logger.critical(chat_id, f'<y>edit status error: <r>{e}</></>')
 
 
-async def status_message_text(chat_id: int) -> str:
+async def status_message_text(chat_id: int, settings: bool = False) -> str:
     data = await db.get_db_data(
         chat_id,
+        'del_old_schedule',
         'pin_schedule_message',
         'schedule_auto_send',
         'school_class',
     )
-    pin_schedule_message, schedule_auto_send, school_class, = data
+    (del_old_schedule, pin_schedule_message, auto_send,
+     school_class) = data
 
     data = await db.get_data_by_cls(
         chat_id,
@@ -134,8 +136,9 @@ async def status_message_text(chat_id: int) -> str:
     last_printed_change_time, last_check_schedule = data
 
     formatted_class = classes_dict[school_class[:-1]]
-    if schedule_auto_send:
-        auto_send_msg = '🟢 Включена, проверка выполняется раз в 10 минут'
+    delay = schedule_auto_send_delay
+    if auto_send:
+        auto_send_msg = f'🟢 Включена, проверка выполняется раз в {delay} минут'
     else:
         auto_send_msg = '🔴 Выключена'
 
@@ -143,9 +146,19 @@ async def status_message_text(chat_id: int) -> str:
         f"🔍 Проверка расписания: {last_check_schedule}\n"
         f"📅 Изменение расписания: {last_printed_change_time}\n\n"
         f"🎓 Класс: {formatted_class}\n"
-        f"📌 Закреплять расписание: {['Нет', 'Да'][pin_schedule_message]}\n\n"
         f"⏳ Автоматическая проверка расписания: \n"
         f"{auto_send_msg}"
     )
 
+    settings_message = (
+        f'🎓 Класс: {formatted_class}\n'
+        f'📌 Закреплять расписание: {["🔴", "🟢"][pin_schedule_message]}\n'
+        f'🗑️ Удалять предыдущее расписание: {["🔴", "🟢"][del_old_schedule]}\n'
+        f'⏳ Автоматическое обновление: {["🔴", "🟢"][auto_send]}\n\n'
+        '_Информацию по всем параметрам можно получить по кнопке '
+        '"Информация о боте"_'
+    )
+
+    if settings:
+        return settings_message
     return status_message
