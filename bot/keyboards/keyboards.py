@@ -79,7 +79,7 @@ def choose_class_number() -> InlineKeyboardMarkup:
         'class_number_9': '9',
         'class_number_10': '10',
         'class_number_11': '11',
-        'back_settings': 'Назад'
+        'status': 'Назад'
     }
     for callback, text in buttons.items():
         kb.button(text=text, callback_data=callback).adjust(3)
