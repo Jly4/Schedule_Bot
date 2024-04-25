@@ -5,7 +5,7 @@ import warnings
 import platform
 import pandas as pd
 
-from typing import Optional
+from typing import Optional, Union
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 from aiogram.types import FSInputFile, CallbackQuery, Message
@@ -168,7 +168,7 @@ async def schedule_txt(schedule_day, last_printed_change_time, cls) -> str:
     return msg
 
 
-async def generate_image(chat_id, formatted_schedule, img, cls) -> None:
+async def generate_image(chat_id, schedule, img, cls) -> None:
     """ this func generates an image with schedule
     1. if it doesn't exist in data folder
     2. if schedule change_time has been changed on site
@@ -177,24 +177,33 @@ async def generate_image(chat_id, formatted_schedule, img, cls) -> None:
     if not await logic.should_regen_img(img):
         return
 
-    # Задаем ширину строки
-    column_widths = [
-        max(formatted_schedule[col].astype(str).apply(len).max() + 1,
-            len(str(col))) for col in formatted_schedule.columns]
+    # delete first row
+    schedule = schedule[1:]
+
+    # create a list with max lengths each line in column
+    column_widths = []
+    for i, col in enumerate(schedule.columns):
+        width = schedule[col].astype(str).apply(len).max()
+        if i == 0:
+            width -= 3
+        elif i == 1:
+            width += 2
+        else:
+            width = 33 - sum(column_widths) // 2 if width < 4 else width
+
+        column_widths.append(width)
 
     # get user color settings
     color_str = await db.get_db_data(chat_id, 'schedule_bg_color')
     color = tuple(int(i) for i in color_str.split(','))
 
-    # Создаем изображение
-    width = sum(
-        column_widths) * 10  # Множитель 10 для более читаемого изображения
-    height = (9 if len(formatted_schedule) != 4 else 8) * 30  # Высота строки
-    image = Image.new("RGB", (width, height),
-                      color)  # Создаем картинку с фоном с заданным цветом
+    # configure image
+    width = sum(column_widths) * 11 + 17  # 10x scale
+    height = (9 if len(schedule) != 4 else 7) * 28  # line height  30x scale
+    image = Image.new("RGB", (width, height), color)
     draw = ImageDraw.Draw(image)
 
-    # Создаем шрифт по умолчанию для PIL
+    # configure font
     if system_type == "Windows":
         font = ImageFont.truetype("arial.ttf", 18)
     elif system_type == "Linux":
@@ -204,21 +213,39 @@ async def generate_image(chat_id, formatted_schedule, img, cls) -> None:
             327680
         )
     else:
-        font = ImageFont.load_default()  # ну, а кто его знает
+        font = ImageFont.load_default()  # who know xd
 
-    # Устанавливаем начальные координаты для текста
-    x, y = 10, 10
+    # set default coords for text
+    x, y = 7, 10
 
-    # Рисуем таблицу
-    for index, row in formatted_schedule.iterrows():
-        for i, (col, width) in enumerate(
-                zip(formatted_schedule.columns, column_widths)):
-            text = str(row[col])
-            draw.text((x, y), text, fill="black", font=font)
-            x += width * 10  # Множитель 10 для более читаемого изображения
+    # generate image
+    for index, row in schedule.iterrows():
+        for col, width in enumerate(column_widths):
+            text = str(row[col + 1])
+            color = await set_lesson_color(text)
+            draw.text((x, y), text, fill=color, font=font)
+            x += width * 10 + 15  # 10x scale
         y += 30
-        x = 10
+        x = 7
+
     image.save(img)
+
+
+async def set_lesson_color(text: str) -> Union[str, tuple]:
+    lessons = (
+        # 'литература',
+        # 'физкультура',
+        # 'английский',
+        # 'химия',
+        # 'история',
+        # 'обж',
+        # 'астрономия',
+        # 'самоподготовка',
+    )
+
+    if text.lower() in lessons:
+        return 187, 189, 187
+    return 'black'
 
 
 # pull schedule of day from dataframe
@@ -283,29 +310,31 @@ async def schedule_for_day(query: CallbackQuery) -> None:
     chat_id = query.message.chat.id
     custom_logger.debug(chat_id)
 
-    if query.data == 'schedule_for_day_menu':
-        await send_status(chat_id, reply_markup=kb.schedule_for_day())
+    if query.data.startswith('set_class_'):
+        callback_prefix = 'set_class_'
+        cls = query.data[len(callback_prefix):]
+        cls = await add_change_to_class(cls)
+
+        await send_status(chat_id, reply_markup=kb.schedule_for_day(cls))
+
+    elif query.data.startswith('schedule_for_cls_'):
+        day_prefix = 'schedule_for_cls_'
+        cls_prefix = 'schedule_for_cls_0_'
+        day = int(query.data[len(day_prefix):(len(day_prefix) + 1)])
+        cls = query.data[len(cls_prefix):]
+
+        await send_status(chat_id)
+        await send_schedule(chat_id, now=1, cls=cls, day=day)
+
+    elif query.data.startswith('schedule_for_day_'):
+        day_prefix = 'schedule_for_day_'
+        day: int = int(query.data[len(day_prefix):])
+
+        await send_status(chat_id)
+        await send_schedule(chat_id, now=1, day=day)
+
     else:
-        if query.data.startswith('set_class_'):
-            callback_prefix = 'set_class_'
-            cls = query.data[len(callback_prefix):]
-            cls = await add_change_to_class(cls)
-
-            await send_status(chat_id, reply_markup=kb.schedule_for_day(cls))
-        elif len(query.data) > 18:
-            day_prefix = 'schedule_for_day_'
-            cls_prefix = 'schedule_for_day_0_'
-            day = int(query.data[len(day_prefix):(len(day_prefix) + 1)])
-            cls = query.data[len(cls_prefix):]
-
-            await send_status(chat_id)
-            await send_schedule(chat_id, now=1, cls=cls, day=day)
-        else:
-            callback_prefix = 'schedule_for_day_'
-            day: int = int(query.data[len(callback_prefix):])
-
-            await send_status(chat_id)
-            await send_schedule(chat_id, now=1, day=day)
+        await send_status(chat_id, reply_markup=kb.schedule_for_day())
 
 
 async def pin_schedule(chat_id, schedule_msg_id) -> None:
@@ -313,7 +342,6 @@ async def pin_schedule(chat_id, schedule_msg_id) -> None:
     if await db.get_db_data(chat_id, 'pin_schedule_message'):
         try:
             await bot.pin_chat_message(chat_id, schedule_msg_id)
-
         except Exception as e:
             custom_logger.critical(chat_id, f'<y>pin error: <r>{e}</></>')
             if "not enough rights to manage pinned messages" in str(e):
@@ -325,10 +353,10 @@ async def turn_deleting(callback_query: CallbackQuery) -> None:
 
     if await db.get_db_data(chat_id, 'del_old_schedule'):
         await db.update_db_data(chat_id, del_old_schedule=0)
-        await settings(callback_query)
     else:
         await db.update_db_data(chat_id, del_old_schedule=1)
-        await settings(callback_query)
+
+    await settings(callback_query)
 
 
 async def turn_schedule_pin(callback_query: CallbackQuery) -> None:
@@ -336,11 +364,10 @@ async def turn_schedule_pin(callback_query: CallbackQuery) -> None:
 
     if await db.get_db_data(chat_id, 'pin_schedule_message'):
         await db.update_db_data(chat_id, pin_schedule_message=0)
-        await settings(callback_query)
-
     else:
         await db.update_db_data(chat_id, pin_schedule_message=1)
-        await settings(callback_query)
+
+    await settings(callback_query)
 
 
 async def schedule_file_name(chat_id, day) -> str:
@@ -350,4 +377,3 @@ async def schedule_file_name(chat_id, day) -> str:
     img = f'bot/data/schedule_{user_class}_{day}_{color}.png'
 
     return img
-

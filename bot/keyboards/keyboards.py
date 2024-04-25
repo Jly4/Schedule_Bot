@@ -7,7 +7,7 @@ from bot.config.config import classes_dict, dev_id
 def main() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     buttons: dict = {
-        'schedule_for_day_menu': 'Расписание',
+        'schedule_for_menu': 'Расписание',
         'settings': 'Настройки'
     }
 
@@ -29,14 +29,14 @@ def schedule_for_day(cls=0) -> InlineKeyboardMarkup:
     }
     for callback, text in buttons.items():
         if cls:
-            callback += f'_{cls}'
+            callback = f'{callback[:12]}_cls_{callback[17:]}_{cls}'
         kb.button(text=text, callback_data=callback).adjust(3)
 
     if not cls:
         kb.button(text='Другой класс', callback_data='choose_class')
         kb.button(text='Назад', callback_data='status').adjust(3)
     else:
-        kb.button(text='Назад', callback_data='schedule_for_day_menu').adjust(3)
+        kb.button(text='Назад', callback_data='schedule_for_menu').adjust(3)
 
     return kb.as_markup()
 
@@ -79,7 +79,7 @@ def choose_class_number() -> InlineKeyboardMarkup:
         'class_number_9': '9',
         'class_number_10': '10',
         'class_number_11': '11',
-        'status': 'Назад'
+        'back_settings': 'Назад'
     }
     for callback, text in buttons.items():
         kb.button(text=text, callback_data=callback).adjust(3)

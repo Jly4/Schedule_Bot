@@ -16,6 +16,7 @@ from bot.utils.school_classes import choose_class_letter, set_class
 from bot.utils.school_classes import choose_class_number
 from bot.utils.autosend_menu import turn_schedule, auto_send_menu, edit_threads
 from bot.utils.states import MainStates
+from bot.utils.status import send_status
 
 router = Router()
 
@@ -102,6 +103,18 @@ async def settings_call(query: CallbackQuery, state: FSMContext) -> None:
 async def settings_call(query: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
     await Description.main_descript(query.message.chat.id)
+
+
+@router.callback_query(F.data == 'back_settings', MainStates.edit_threads)
+async def settings_call(query: CallbackQuery, state: FSMContext) -> None:
+    await state.clear()
+    await auto_send_menu(query)
+
+
+@router.callback_query(F.data == 'back_settings', MainStates.choose_class)
+async def settings_call(query: CallbackQuery, state: FSMContext) -> None:
+    await state.clear()
+    await schedule_for_day(query)
 
 
 @router.callback_query(F.data == 'back_settings')

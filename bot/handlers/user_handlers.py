@@ -29,7 +29,7 @@ async def status_call(query: CallbackQuery) -> None:
     await send_status(query.message.chat.id)
 
 
-@router.callback_query(F.data.startswith('schedule_for_day_'))
+@router.callback_query(F.data.startswith('schedule_for_'))
 async def update_schedule_call(query: CallbackQuery) -> None:
     await schedule_for_day(query)
 
