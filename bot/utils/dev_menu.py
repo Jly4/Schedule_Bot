@@ -14,13 +14,11 @@ from bot.utils.messages import del_msg_by_id
 from bot.utils.utils import get_active_user_list
 
 
-async def dev_settings(query: Union[Message, CallbackQuery]) -> None:
+async def dev_settings(query: Union[Message, CallbackQuery], edit=1) -> None:
     if type(query) is CallbackQuery:
         chat_id = query.message.chat.id  # get chat_id
-        edit = 1
     else:
         chat_id = query.chat.id
-        edit = 0
         await del_msg_by_id(chat_id, query.message_id, 'dev_settings')
 
     custom_logger.debug(chat_id)
@@ -28,7 +26,7 @@ async def dev_settings(query: Union[Message, CallbackQuery]) -> None:
     suspend = await db.get_dev_data('suspend_bot')
     dates = await db.get_dev_data('suspend_date')
     if not dates:
-        dates = '-'
+        dates = '- Нету -'
 
     txt = (
         'Dev Menu\n\n'
@@ -40,7 +38,7 @@ async def dev_settings(query: Union[Message, CallbackQuery]) -> None:
         chat_id,
         text=txt,
         edit=edit,
-        reply_markup=kb.dev_settings()
+        reply_markup=kb.dev_settings(menu=True)
     )
 
 
@@ -51,68 +49,44 @@ async def suspend_bot(query: CallbackQuery) -> None:
     await dev_settings(query)
 
 
-async def announce_guide(query: CallbackQuery) -> None:
-    custom_logger.debug(query.from_user.id)
+async def announce(query: CallbackQuery) -> None:
+    chat_id = query.message.chat.id
+    custom_logger.debug(chat_id)
 
     txt = (
-        'Чтобы отправить сообщение всем активным пользователям бота, '
-        'отправьте боту сообщение с префикcом `/announce `*текст*'
+        'Отправьте боту сообщение, которое он отправит всем '
+        'активным пользователям бота, для отмены нажмите "Назад"'
     )
-
-    msg = await bot.send_message(
-        query.message.chat.id,
+    status_id = await db.get_status_msg_id(chat_id)
+    await bot.edit_message_text(
+        chat_id=chat_id,
         text=txt,
+        message_id=status_id,
+        reply_markup=kb.dev_settings(),
         parse_mode='MarkDown'
     )
 
-    await asyncio.sleep(4)
-    await del_msg_by_id(query.message.chat.id, msg.message_id)
 
-
-async def announce(message: Message) -> None:
-    custom_logger.debug(message.chat.id)
-
+async def send_announce(message: Message) -> None:
     await del_msg_by_id(message.chat.id, message.message_id)
-    prefix = '/announce '
-    msg = message.text[len(prefix):]
 
     chat_id_list = await get_active_user_list()
     chat_id_list.remove(message.from_user.id)
+    msg = message.text
 
+    await dev_settings(message)
     for chat_id in chat_id_list:
         await bot.send_message(chat_id, text=msg)
         await asyncio.sleep(1)
 
 
-async def suspend_date_guide(query: CallbackQuery) -> None:
-    custom_logger.debug(query.from_user.id)
-
-    txt = (
-        'Чтобы добавить даты в список, отправьте боту сообщение с префиксом '
-        '`/suspend_date`, после которого идет дата или диапазон дат '
-        'через знак "-"\n\nЧтобы удалить даты из списка, '
-        'поставьте знак "-" в начале сообщения\n\nПримеры:\n'
-        '`/suspend_date 01.01.22` - Добавить 1 Января 22г. в список\n'
-        '`/suspend_date -01.01.22` - Убрать 1 Января 22г. из списка\n'
-        '`/suspend_date 07.04.24-20.04.24` - Добавить даты с 7 по 20 апреля '
-        'в список\n`/suspend_date -07.04.24-20.04.24` - Убрать даты с 7 по '
-        '20 апреля из списка'
-    )
-
-    msg = await bot.send_message(
-        chat_id=query.message.chat.id,
-        text=txt,
-        parse_mode='MarkDown'
-    )
-
-    await asyncio.sleep(10)
-    await del_msg_by_id(query.message.chat.id, msg.message_id)
+""" suspend dates
+"""
 
 
-async def check_and_clear_date(message: Message) -> str:
+async def check_date(message: Message) -> str:
     pattern = re.compile(r'(?:|-)(\d{2}.\d{2}.\d{2})(-(\d{2}.\d{2}.\d{2}))?$')
-    prefix = '/suspend_date '
-    new_date = message.text[len(prefix):]
+    new_date = message.text
 
     if bool(pattern.match(new_date)):
         return new_date
@@ -161,16 +135,45 @@ async def save_dates(dates: set) -> None:
     await db.update_dev_data(suspend_date=dates)
 
 
-async def suspend_date(message: Message) -> None:
+async def suspend_date(query: CallbackQuery) -> None:
+    chat_id = query.message.chat.id
+    custom_logger.debug(chat_id)
+
+    txt = (
+        'Чтобы добавить даты в список, отправьте дату или диапазон дат через '
+        'знак "-". Чтобы удалить даты из списка, поставьте знак "-" перед '
+        'датой начале сообщения\n\nПримеры:\n'
+        '`01.01.25` - Добавить 1 Января 2025 в список\n'
+        '`-01.01.25` - Убрать 1 Января 2025 из списка\n'
+        '`07.04.24-20.04.25` - Добавить даты с 7 по 20 апреля 2025 в список\n'
+        '`-07.04.24-20.04.25` - Убрать даты с 7 по 20 апреля 2025 из списка\n\n'
+        '_Бот не даст добавить дату которая ужа прошла_'
+    )
+
+    status_id = await db.get_status_msg_id(chat_id)
+    await bot.edit_message_text(
+        chat_id=chat_id,
+        text=txt,
+        message_id=status_id,
+        reply_markup=kb.dev_settings(),
+        parse_mode='MarkDown'
+    )
+
+
+async def set_suspend_date(message: Message) -> bool:
     custom_logger.debug(message.chat.id)
     await del_msg_by_id(message.chat.id, message.message_id)
 
     dates = await db.get_dev_data('suspend_date')
     dates = set(dates.split(', ') if dates else dates)
-    new_date = await check_and_clear_date(message)
+    new_date = await check_date(message)
     if not new_date:
-        return
+        return False
 
     dates = await format_dates(dates, new_date)
     await purge_old_suspend_dates(dates)
     await save_dates(dates)
+    await dev_settings(message)
+
+    return True
+

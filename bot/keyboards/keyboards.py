@@ -1,6 +1,7 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardMarkup
 
+from bot.database.database import db
 from bot.config.config import classes_dict, dev_id
 
 
@@ -13,6 +14,13 @@ def main() -> InlineKeyboardMarkup:
 
     for callback, text in buttons.items():
         kb.button(text=text, callback_data=callback).adjust(2)
+
+    return kb.as_markup()
+
+
+def back() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text='Назад', callback_data='back_button').adjust(2)
 
     return kb.as_markup()
 
@@ -46,10 +54,10 @@ def settings(*user_id: int) -> InlineKeyboardMarkup:
 
     buttons = {
         'set_class': 'Изменить класс',
-        'autosend': 'Обновление расписания',
+        'autosend': 'Автообновление',
         'pin_schedule': 'Закреплять расписание',
         'schedule_auto_delete': 'Удалять предыдущее расписание',
-        'color_menu': 'Изменить цвет расписания',
+        'color_menu': 'Настройки цвета',
         'disable_bot': 'Отключить бота',
         'description': 'Информация о боте',
     }
@@ -79,7 +87,7 @@ def choose_class_number() -> InlineKeyboardMarkup:
         'class_number_9': '9',
         'class_number_10': '10',
         'class_number_11': '11',
-        'back_settings': 'Назад'
+        'back_button': 'Назад'
     }
     for callback, text in buttons.items():
         kb.button(text=text, callback_data=callback).adjust(3)
@@ -114,7 +122,7 @@ def choose_class_letter(class_number) -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def description(main_descript=False) -> InlineKeyboardMarkup:
+def description() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
 
     buttons = {
@@ -122,47 +130,28 @@ def description(main_descript=False) -> InlineKeyboardMarkup:
         'buttons_descript': 'Описание кнопок',
     }
 
-    if main_descript:
-        for callback, text in buttons.items():
-            kb.button(text=text, callback_data=callback)
-        kb.button(text='Поддержка', url='https://t.me/Yosqe')
-
-    kb.button(text='Назад', callback_data='back_settings').adjust(2)
-    return kb.as_markup()
-
-
-def choose_color() -> InlineKeyboardMarkup:
-    kb = InlineKeyboardBuilder()
-
-    buttons = {
-        'set color 255,204,153 Оранжевый': 'Оранжевый',
-        'set color 255,255,143 желтый': 'Желтый',
-        'set color 192,255,192 зеленый': 'Зеленый',
-        'set color 204,255,255 голубой': 'Голубой',
-        'set color 255,204,255 розовый': 'Розовый',
-        'set color 192,192,255 фиолетовый': 'Фиолетовый',
-        'set color 256,256,256 Белый': 'Белый',
-        'back_settings': 'Назад'
-    }
-
     for callback, text in buttons.items():
-        kb.button(text=text, callback_data=callback).adjust(3)
+        kb.button(text=text, callback_data=callback)
 
+    kb.button(text='Поддержка', url='https://t.me/Yosqe')
+    kb.button(text='Назад', callback_data='back_button').adjust(2)
     return kb.as_markup()
 
 
-def dev_settings() -> InlineKeyboardMarkup:
+def dev_settings(menu: bool = 0) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
 
     buttons = {
-        'announce_guide': 'Рассылка',
-        'suspend_date_guide': 'Даты приостановки',
+        'announce': 'Рассылка',
+        'suspend_date': 'Даты приостановки',
         'suspend_bot': 'Приостановить бота',
-        'back_settings': 'Назад'
     }
 
-    for callback, text in buttons.items():
-        kb.button(text=text, callback_data=callback).adjust(2)
+    if menu:
+        for callback, text in buttons.items():
+            kb.button(text=text, callback_data=callback).adjust(2)
+
+    kb.button(text='Назад', callback_data='back_button').adjust(2)
 
     return kb.as_markup()
 
@@ -174,7 +163,7 @@ def auto_update_settings() -> InlineKeyboardMarkup:
         'turn_autosend': 'Вкл/Выкл',
         'edit_threads': 'Добавить/Удалить класс',
         'autosend_descript': 'Описание работы',
-        'back_settings': 'Назад'
+        'back_button': 'Назад'
     }
 
     for callback, text in buttons.items():
@@ -182,3 +171,82 @@ def auto_update_settings() -> InlineKeyboardMarkup:
 
     return kb.as_markup()
 
+
+""" color keyboards
+"""
+
+
+def color_menu() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+
+    buttons = {
+        'bg_color_menu': 'Цвет фона',
+        'text_color_menu': 'Цвет текста',
+        'back_button': 'Назад'
+    }
+
+    for callback, text in buttons.items():
+        kb.button(text=text, callback_data=callback).adjust(2)
+
+    return kb.as_markup()
+
+
+def text_color_menu() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+
+    buttons = {
+        'lessons_color': 'Цвет предметов',
+        'back_button': 'Назад'
+    }
+
+    for callback, text in buttons.items():
+        kb.button(text=text, callback_data=callback).adjust(2)
+
+    return kb.as_markup()
+
+
+def lessons_color() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+
+    buttons = {
+        'lessons_color_group': 'Редактировать группы',
+        'lessons_color_choose': 'Редактировать предметы',
+        'back_button': 'Назад'
+    }
+
+    for callback, text in buttons.items():
+        kb.button(text=text, callback_data=callback).adjust(2)
+
+    return kb.as_markup()
+
+
+def choose_color_group(groups) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+
+    for group in groups:
+        callback = f'color_group_{group}'
+        kb.button(text=group, callback_data=callback).adjust(2)
+
+    kb.button(text='Назад', callback_data='back_button').adjust(2)
+
+    return kb.as_markup()
+
+
+def choose_color() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+
+    buttons = {
+        'set_color_255,204,153_Оранжевый': 'Оранжевый',
+        'set_color_255,255,143_Желтый': 'Желтый',
+        'set_color_192,255,192_Зеленый': 'Зеленый',
+        'set_color_204,255,255_Голубой': 'Голубой',
+        'set_color_255,204,255_Розовый': 'Розовый',
+        'set_color_192,192,255_Фиолетовый': 'Фиолетовый',
+        'set_color_256,256,256_Белый': 'Белый',
+        'back_button': 'Назад'
+    }
+
+    for callback, text in buttons.items():
+        kb.button(text=text, callback_data=callback).adjust(3)
+
+    return kb.as_markup()

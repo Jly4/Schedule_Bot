@@ -32,7 +32,9 @@ class DatabaseClass:
         last_print_time_day TEXT DEFAULT '',
         last_print_time_hour TEXT DEFAULT '',
         prev_schedule_json TEXT DEFAULT '',
-        schedule_bg_color TEXT DEFAULT '255,255,143',
+        schedule_bg_color TEXT DEFAULT '255, 255, 143',
+        main_text_color TEXT DEFAULT '0, 0, 0',
+        lessons_by_color TEXT DEFAULT '',
         autosend_classes TEXT DEFAULT ''
         )
         ''')

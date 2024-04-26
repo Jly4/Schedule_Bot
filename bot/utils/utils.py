@@ -92,6 +92,7 @@ async def disable_bot(query: Union[CallbackQuery, Message]) -> None:
         chat_id = query.chat.id
 
     # clear chat
+    id_list = []
     for cls in classes_dict.keys():
         cls = await add_change_to_class(cls)
         msg_id = await db.get_data_by_cls(
@@ -99,13 +100,16 @@ async def disable_bot(query: Union[CallbackQuery, Message]) -> None:
             cls,
             'last_schedule_message_id'
         )
-        await del_msg_by_id(chat_id, msg_id, 'clear_chat')
+        if msg_id:
+            id_list.append(msg_id)
+            await del_msg_by_id(chat_id, msg_id, 'clear_chat')
 
     chat = await bot.get_chat(chat_id)
     if chat.type == 'private':
         status_id = await db.get_status_msg_id(chat_id)
+        message_id = max(id_list) + 15 if id_list else status_id + 30
         # noinspection PyUnboundLocalVariable
-        for msg_id in range(msg_id + 10, status_id - 30, -1):
+        for msg_id in range(message_id, status_id - 30, -1):
             await del_msg_by_id(chat_id, msg_id, 'clear_chat')
 
     # disable bot for user

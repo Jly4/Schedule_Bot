@@ -1,3 +1,4 @@
+import re
 import pytz
 import asyncio
 from datetime import datetime
@@ -61,19 +62,6 @@ class IsAdmin(BaseFilter):
             return False
 
 
-async def get_admins_id_list(chat_id: int, chat_type: str) -> list:
-    custom_logger.debug(chat_id)
-    if chat_type == 'private':
-        return [chat_id]
-    else:
-        admins = await bot.get_chat_administrators(chat_id)
-
-        admins_list = [admin.user.id for admin in admins]
-        custom_logger.debug(chat_id, f'<y>admin_list: <r>{admins_list}</></>')
-
-        return admins_list
-
-
 class AutoSendFilter:
     def __init__(self, chat_id: int):
         self.chat_id = chat_id
@@ -124,4 +112,51 @@ class AutoSendFilter:
             return False
 
         return True
+
+
+async def get_admins_id_list(chat_id: int, chat_type: str) -> list:
+    custom_logger.debug(chat_id)
+    if chat_type == 'private':
+        return [chat_id]
+    else:
+        admins = await bot.get_chat_administrators(chat_id)
+
+        admins_list = [admin.user.id for admin in admins]
+        custom_logger.debug(chat_id, f'<y>admin_list: <r>{admins_list}</></>')
+
+        return admins_list
+
+
+async def check_pattern(chat_id: int, data: str, pattern: str = '') -> bool:
+    if pattern == 'lesson' and await check_lesson_pattern(data):
+        return True
+
+    if pattern == 'color' and await check_color_pattern(data):
+        return True
+
+    msg = await bot.send_message(chat_id, 'Неправильный формат')
+    await asyncio.sleep(2)
+    await bot.delete_message(chat_id, msg.message_id)
+
+    return False
+
+
+async def check_lesson_pattern(data: str) -> bool:
+    pattern = re.compile(r'^[а-яё\s.,]+$')
+    if not bool(pattern.match(data)):
+        return False
+
+    return True
+
+
+async def check_color_pattern(data: str) -> bool:
+    pattern = re.compile(r'^\d{1,3},\s*\d{1,3},\s*\d{1,3}$')
+    if not bool(pattern.match(data)):
+        return False
+
+    for i in [int(i) for i in data.split(',')]:
+        if i not in range(257):
+            return False
+
+    return True
 

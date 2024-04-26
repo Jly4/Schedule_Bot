@@ -94,7 +94,7 @@ async def send_schedule(
         prev_schedule_json = formatted_schedule.to_json()
         image_path = await schedule_file_name(chat_id, schedule_day)
 
-        await generate_image(chat_id, formatted_schedule, image_path, cls)
+        await generate_image(chat_id, formatted_schedule, image_path)
         await del_old_schedule(chat_id, cls)
 
         txt = await schedule_txt(schedule_day, last_printed_change_time, cls)
@@ -168,15 +168,11 @@ async def schedule_txt(schedule_day, last_printed_change_time, cls) -> str:
     return msg
 
 
-async def generate_image(chat_id, schedule, img, cls) -> None:
+async def generate_image(chat_id, schedule, img) -> None:
     """ this func generates an image with schedule
     1. if it doesn't exist in data folder
     2. if schedule change_time has been changed on site
     """
-    logic = ScheduleLogic(chat_id, cls)
-    if not await logic.should_regen_img(img):
-        return
-
     # delete first row
     schedule = schedule[1:]
 
@@ -199,7 +195,7 @@ async def generate_image(chat_id, schedule, img, cls) -> None:
 
     # configure image
     width = sum(column_widths) * 11 + 17  # 10x scale
-    height = (9 if len(schedule) != 4 else 7) * 28  # line height  30x scale
+    height = (9 if len(schedule) != 3 else 7) * 28  # line height  30x scale
     image = Image.new("RGB", (width, height), color)
     draw = ImageDraw.Draw(image)
 
@@ -222,7 +218,7 @@ async def generate_image(chat_id, schedule, img, cls) -> None:
     for index, row in schedule.iterrows():
         for col, width in enumerate(column_widths):
             text = str(row[col + 1])
-            color = await set_lesson_color(text)
+            color = await get_color(chat_id, text.lower())
             draw.text((x, y), text, fill=color, font=font)
             x += width * 10 + 15  # 10x scale
         y += 30
@@ -231,21 +227,21 @@ async def generate_image(chat_id, schedule, img, cls) -> None:
     image.save(img)
 
 
-async def set_lesson_color(text: str) -> Union[str, tuple]:
-    lessons = (
-        # 'литература',
-        # 'физкультура',
-        # 'английский',
-        # 'химия',
-        # 'история',
-        # 'обж',
-        # 'астрономия',
-        # 'самоподготовка',
-    )
+async def get_color(chat_id: int, text: str) -> Union[str, tuple]:
+    data = await db.get_db_data(chat_id, 'lessons_by_color')
+    data = eval(data) if data else {}
+    color_str = ''
 
-    if text.lower() in lessons:
-        return 187, 189, 187
-    return 'black'
+    for value in data.values():
+        if text in value:
+            color_str = list(data.keys())[list(data.values()).index(value)]
+
+    if not color_str:
+        print(text, color_str)
+        color_str = await db.get_db_data(chat_id, 'main_text_color')
+
+    color = tuple(int(i) for i in color_str.split(','))
+    return color
 
 
 # pull schedule of day from dataframe
@@ -373,7 +369,8 @@ async def turn_schedule_pin(callback_query: CallbackQuery) -> None:
 async def schedule_file_name(chat_id, day) -> str:
     user_class = await db.get_db_data(chat_id, 'school_class')
     color = await db.get_db_data(chat_id, 'schedule_bg_color')
+    text_color = await db.get_db_data(chat_id, 'main_text_color')
 
-    img = f'bot/data/schedule_{user_class}_{day}_{color}.png'
+    img = f'bot/data/schedule_{user_class}_{day}_{color}_{text_color}.png'
 
     return img
