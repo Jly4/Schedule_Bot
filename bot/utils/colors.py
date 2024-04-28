@@ -18,7 +18,6 @@ async def color_menu(query: CallbackQuery) -> None:
     text = (
         'Меню настройки цвета\n\n'
         'В данном меню вы можете сменить цвет фона или текста расписания. '
-
     )
 
     await bot.edit_message_text(
@@ -38,15 +37,16 @@ async def text_color_menu(query: CallbackQuery) -> None:
     chat_id = query.message.chat.id
     status_id = await db.get_status_msg_id(chat_id)
     text = (
-        'Меню настройки цвета текста\n\n'
-        'В данном меню вы можете сменить основной цвет текста расписания.\n'
-        'Для этого отправьте боту сообщение с кодом цвета в '
+        'Для того чтобы изменить основной цвет текста расписания вы '
+        'можете воспользоваться одним из предложенных ниже цветов, '
+        'либо отправьте боту сообщение с кодом цвета в '
         'формате RGB по примеру ниже, заменив цифры на свои.\n\n'
-        '`256, 256, 256`\n(Нажмите, чтобы скопировать)\n\n'
+        'Пример: (нажмите на пример чтобы скопировать)\n'
+        '`256, 256, 256` - Установить белый цвет\n\n'
         'Выбрать цвет в формате RGB можно '
         '[тут](https://www.google.com/search?q=rgb+color+picker).\n\n'
         'Также можно сменить цвет для конкретных предметов, нажав на кнопку '
-        'Цвет предметов\n'
+        '"Цвет предметов"\n'
     )
 
     await bot.edit_message_text(
@@ -67,14 +67,11 @@ async def lessons_color(query: CallbackQuery) -> None:
     status_id = await db.get_status_msg_id(chat_id)
 
     text = (
-        'Меню настройки цвета предметов\n\n'
-        'В данном меню вы сможете назначить цвет для определенных предметов.'
-        '\n<s><i>Например поставить цвет фона как цвет текста для предметов, '
-        'на которые вы не будете ходить))))))))))))</i></s>\n\n'
-        'Для этого вам сначала нужно создать группу-цвет.\nПосле того как у '
-        'вас есть хотя-бы одна группа, вы можете можете добавить в нее '
-        'предметы, которые будут окрашиваться в цвет этой группы.\n\n'
-
+        'Для того чтобы изменить цвет для конкретных предметов, вам сначала '
+        'нужно создать группу-цвет, нажав на кнопку "редакт. группы".\n'
+        'После того как у вас есть хотя-бы одна группа, '
+        'вы можете можете добавить в нее предметы, '
+        'которые будут окрашиваться в цвет этой группы.\n\n'
     )
 
     await bot.edit_message_text(
@@ -95,14 +92,14 @@ async def lessons_color_group(query: Union[CallbackQuery, Message]) -> None:
     status_id = await db.get_status_msg_id(chat_id)
 
     data = await db.get_db_data(chat_id, 'lessons_by_color')
-    groups = '\n'.join(eval(data).keys()) if data else {}
+    groups = '\n'.join(eval(data).keys()) if data else ''
 
     text = (
         'Для того чтобы добавить группу, отправьте боту сообщение с кодом '
-        'цвета в формате RGB. Это одновременно будет и название группы, '
-        'и цветом в которую будут окрашиваться предметы находящиеся в этой '
-        'группе. \nЧтобы удалить группу, отправьте цвет группы, но в начале '
-        'поставьте знак "-".\n\nПримеры:\n'
+        'цвета в формате RGB.\nЭто одновременно будет и название группы, '
+        'и цветом в которую будут окрашиваться предметы находящиеся в ней.\n'
+        'Чтобы удалить группу, отправьте цвет группы, но в начале поставьте '
+        'знак "-".\n\nПримеры: (нажмите на пример чтобы скопировать)\n'
         '`256, 256, 256` - чтобы добавить группу с белым цветом. \n'
         '`-256, 256, 256` - чтобы удалить группу с белым цветом. \n\n'
         'Выбрать цвет в формате RGB можно '
@@ -143,7 +140,7 @@ async def edit_groups(query: Message) -> None:
     await db.update_db_data(chat_id, lessons_by_color=str_dict)
     await lessons_color_group(query)
 
-    msg = await bot.send_message(chat_id, 'Группы успешно отредактированы')
+    msg = await bot.send_message(chat_id, 'Группы отредактированы')
     await asyncio.sleep(1.5)
     await bot.delete_message(chat_id, msg.message_id)
 
@@ -188,14 +185,14 @@ async def lessons_color_lesson(
 
     text = (
         'Для того чтобы добавить предмет в группу, отправьте боту сообщение с '
-        'названием предмета, или предметов через запятую.\nЧтобы удалить '
-        'предметы из группы отправьте такое же сообщение, но перед '
-        'предметом/предметами поставьте знак "-". '
-        '\n\nПримеры:\n'
-        '`математика, русский` - чтобы добавить в группу с белым '
-        'цветом. \n'
-        '`-математика, русский` - чтобы удалить из группы с '
-        'белым цветом. \n\n'
+        'названием предмета, или предметов через запятую.\n'
+        'Чтобы удалить предметы из группы отправьте такое же сообщение, '
+        'но перед предметом/предметами поставьте знак "-".\n\n'
+        'Примеры: (нажмите на пример чтобы скопировать)\n'
+        '`русский` - чтобы добавить в группу.\n'
+        '`математика, английский` - чтобы добавить в группу.\n'
+        '`-математика, русский` - чтобы удалить из группы\n\n'
+    
         f'*Выбранная группа: {group}*\n'
         f'Предметы в группе: {lessons}'
     )
@@ -246,7 +243,7 @@ async def edit_lessons(query: Message, group) -> None:
     await db.update_db_data(chat_id, lessons_by_color=str_dict)
     await lessons_color_lesson(query, group)
 
-    msg = await bot.send_message(chat_id, 'Предметы успешно отредактированы')
+    msg = await bot.send_message(chat_id, 'Предметы отредактированы')
     await asyncio.sleep(1.5)
     await bot.delete_message(chat_id, msg.message_id)
 
@@ -276,7 +273,8 @@ async def bg_color_menu(query: CallbackQuery) -> None:
         'одним из предложенных ниже цветов, либо отправить боту '
         'сообщение с кодом цвета в формате RGB по примеру ниже, заменив '
         'цифры на свои.\n\n'
-        '`256, 256, 256`\n(Нажмите, чтобы скопировать)\n\n'
+        'Примеры:(нажмите на пример чтобы скопировать)\n'
+        '`256, 256, 256`\n\n'
         'Выбрать цвет в формате RGB можно '
         '[тут](https://www.google.com/search?q=rgb+color+picker).\n'
     )
@@ -285,7 +283,7 @@ async def bg_color_menu(query: CallbackQuery) -> None:
         chat_id=chat_id,
         text=text,
         message_id=status_message_id,
-        reply_markup=kb.choose_color(),
+        reply_markup=kb.choose_bg_color(),
         disable_web_page_preview=True,
         parse_mode='MarkDown'
     )
@@ -325,12 +323,25 @@ async def update_color(chat_id: int, target: str, color: str) -> None:
     txt = 'Цвет успешно сменен'
     msg = await bot.send_message(chat_id, text=txt)
 
+    await del_msg_by_db_name(chat_id, 'last_schedule_message_id')
     await asyncio.sleep(2)
     await del_msg_by_id(chat_id, msg.message_id)
-    await del_msg_by_db_name(chat_id, 'last_schedule_message_id')
 
     await send_schedule(chat_id, now=1)
 
 
+async def get_color_for_lesson(chat_id: int, text: str) -> Union[str, tuple]:
+    data = await db.get_db_data(chat_id, 'lessons_by_color')
+    data = eval(data) if data else {}
+    color_str = ''
 
+    for value in data.values():
+        if text in value:
+            color_str = list(data.keys())[list(data.values()).index(value)]
 
+    if not color_str:
+        print(text, color_str)
+        color_str = await db.get_db_data(chat_id, 'main_text_color')
+
+    color = tuple(int(i) for i in color_str.split(','))
+    return color

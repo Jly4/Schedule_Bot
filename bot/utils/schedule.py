@@ -5,7 +5,7 @@ import warnings
 import platform
 import pandas as pd
 
-from typing import Optional, Union
+from typing import Optional
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 from aiogram.types import FSInputFile, CallbackQuery, Message
@@ -173,6 +173,7 @@ async def generate_image(chat_id, schedule, img) -> None:
     1. if it doesn't exist in data folder
     2. if schedule change_time has been changed on site
     """
+    from bot.utils.colors import get_color_for_lesson
     # delete first row
     schedule = schedule[1:]
 
@@ -218,30 +219,13 @@ async def generate_image(chat_id, schedule, img) -> None:
     for index, row in schedule.iterrows():
         for col, width in enumerate(column_widths):
             text = str(row[col + 1])
-            color = await get_color(chat_id, text.lower())
+            color = await get_color_for_lesson(chat_id, text.lower())
             draw.text((x, y), text, fill=color, font=font)
             x += width * 10 + 15  # 10x scale
         y += 30
         x = 7
 
     image.save(img)
-
-
-async def get_color(chat_id: int, text: str) -> Union[str, tuple]:
-    data = await db.get_db_data(chat_id, 'lessons_by_color')
-    data = eval(data) if data else {}
-    color_str = ''
-
-    for value in data.values():
-        if text in value:
-            color_str = list(data.keys())[list(data.values()).index(value)]
-
-    if not color_str:
-        print(text, color_str)
-        color_str = await db.get_db_data(chat_id, 'main_text_color')
-
-    color = tuple(int(i) for i in color_str.split(','))
-    return color
 
 
 # pull schedule of day from dataframe
@@ -310,8 +294,14 @@ async def schedule_for_day(query: CallbackQuery) -> None:
         callback_prefix = 'set_class_'
         cls = query.data[len(callback_prefix):]
         cls = await add_change_to_class(cls)
-
-        await send_status(chat_id, reply_markup=kb.schedule_for_day(cls))
+        text = (
+            'Выберите день для получения расписания.'
+        )
+        await send_status(
+            chat_id,
+            text=text,
+            reply_markup=kb.schedule_for_day(cls)
+        )
 
     elif query.data.startswith('schedule_for_cls_'):
         day_prefix = 'schedule_for_cls_'
@@ -330,7 +320,17 @@ async def schedule_for_day(query: CallbackQuery) -> None:
         await send_schedule(chat_id, now=1, day=day)
 
     else:
-        await send_status(chat_id, reply_markup=kb.schedule_for_day())
+        cls = await db.get_db_data(chat_id, 'school_class')
+        school_class = classes_dict[cls[:-1]]
+        text = (
+            f'Выберите день для получения расписания {school_class} класса.\n\n'
+            'Или нажмите "Другой класс", чтобы выбрать класс.'
+        )
+        await send_status(
+            chat_id,
+            text=text,
+            reply_markup=kb.schedule_for_day()
+        )
 
 
 async def pin_schedule(chat_id, schedule_msg_id) -> None:

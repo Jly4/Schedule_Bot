@@ -165,7 +165,6 @@ async def task_already_run(chat_id, task_name) -> bool:
 
 async def run_task_if_disabled(chat_id: int, task: str) -> None:
     """
-
     :param chat_id: number of user id
     :param task:  class which the user as extra thread
     to get updates for schedule

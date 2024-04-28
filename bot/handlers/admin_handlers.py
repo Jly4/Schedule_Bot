@@ -103,16 +103,21 @@ async def lesson_color_call(query: CallbackQuery, state: FSMContext) -> None:
 async def set_bg_color_call(query: CallbackQuery) -> None:
     await set_color(query, target='bg')
 
+
+@router.callback_query(F.data.startswith('set_color_'), MainStates.text_color)
+async def set_bg_color_call(query: CallbackQuery) -> None:
+    await set_color(query, target='text')
+
 """ message handlers """
 
 
 @router.message(MainStates.lessons_color_group, IsAdmin())
-async def set_color_msg(message: Message, state: FSMContext) -> None:
+async def edit_groups_msg(message: Message) -> None:
     await edit_groups(message)
 
 
 @router.message(MainStates.lessons_color_lesson, IsAdmin())
-async def set_color_msg(message: Message, state: FSMContext) -> None:
+async def edit_lessons_msg(message: Message, state: FSMContext) -> None:
     group = await state.get_data()
     await edit_lessons(message, group['lessons_color_lesson'])
 

@@ -1,7 +1,6 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardMarkup
 
-from bot.database.database import db
 from bot.config.config import classes_dict, dev_id
 
 
@@ -195,12 +194,15 @@ def text_color_menu() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
 
     buttons = {
-        'lessons_color': 'Цвет предметов',
-        'back_button': 'Назад'
+        'set_color_000,000,000_Черный': 'Черный',
+        'set_color_256,256,256_Белый': 'Белый',
+        'set_color_000,256,000_Зеленый': 'Зеленый',
+        'lessons_color': 'Цвета предметов',
+        'back_button': 'Назад',
     }
 
     for callback, text in buttons.items():
-        kb.button(text=text, callback_data=callback).adjust(2)
+        kb.button(text=text, callback_data=callback).adjust(3)
 
     return kb.as_markup()
 
@@ -209,8 +211,8 @@ def lessons_color() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
 
     buttons = {
-        'lessons_color_group': 'Редактировать группы',
-        'lessons_color_choose': 'Редактировать предметы',
+        'lessons_color_group': 'Редакт. группы',
+        'lessons_color_choose': 'Редакт. предметы',
         'back_button': 'Назад'
     }
 
@@ -232,7 +234,7 @@ def choose_color_group(groups) -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def choose_color() -> InlineKeyboardMarkup:
+def choose_bg_color() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
 
     buttons = {
@@ -242,6 +244,7 @@ def choose_color() -> InlineKeyboardMarkup:
         'set_color_204,255,255_Голубой': 'Голубой',
         'set_color_255,204,255_Розовый': 'Розовый',
         'set_color_192,192,255_Фиолетовый': 'Фиолетовый',
+        'set_color_000,000,000_Черный': 'Черный',
         'set_color_256,256,256_Белый': 'Белый',
         'back_button': 'Назад'
     }
