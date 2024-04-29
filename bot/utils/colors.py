@@ -340,7 +340,6 @@ async def get_color_for_lesson(chat_id: int, text: str) -> Union[str, tuple]:
             color_str = list(data.keys())[list(data.values()).index(value)]
 
     if not color_str:
-        print(text, color_str)
         color_str = await db.get_db_data(chat_id, 'main_text_color')
 
     color = tuple(int(i) for i in color_str.split(','))

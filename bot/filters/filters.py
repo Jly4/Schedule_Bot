@@ -1,7 +1,7 @@
 import re
 import pytz
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Union
 
 from aiogram.types import Message, CallbackQuery
@@ -97,17 +97,19 @@ class AutoSendFilter:
         local_date = datetime.now(local_timezone)
         hour = local_date.hour
         month = local_date.month
-        formatted_date = local_date.strftime("%d.%m.%y")
+
         dates_str = await db.get_dev_data('suspend_date')
         dates = set(dates_str.split(', '))
-
         if hour < 6:
             return False
 
         if month in [6, 7, 8]:
             return False
 
-        if formatted_date in dates:
+        today = local_date.strftime("%d.%m.%y")
+        tomorrow = (local_date + timedelta(days=1)).strftime("%d.%m.%y")
+
+        if today in dates and (tomorrow in dates or hour < 20):
             custom_logger.debug(msg='suspended by date')
             return False
 
@@ -159,4 +161,3 @@ async def check_color_pattern(data: str) -> bool:
             return False
 
     return True
-

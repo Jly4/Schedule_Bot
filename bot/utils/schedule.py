@@ -1,4 +1,6 @@
 import re
+
+import PIL.FontFile
 import pytz
 import asyncio
 import warnings
@@ -169,14 +171,34 @@ async def schedule_txt(schedule_day, last_printed_change_time, cls) -> str:
 
 
 async def generate_image(chat_id, schedule, img) -> None:
-    """ this func generates an image with schedule
-    1. if it doesn't exist in data folder
-    2. if schedule change_time has been changed on site
-    """
     from bot.utils.colors import get_color_for_lesson
     # delete first row
     schedule = schedule[1:]
+    # get font config
+    font = await get_font_config()
+    # get column widths
+    column_widths = await get_column_widths(schedule)
+    # get image config
+    image = await get_image_config(chat_id, schedule, column_widths)
 
+    # create a draw object
+    draw = ImageDraw.Draw(image)
+    # set default coords for text
+    x, y = 7, 10
+    # generate image
+    for index, row in schedule.iterrows():
+        for col, width in enumerate(column_widths):
+            text = str(row[col + 1])
+            color = await get_color_for_lesson(chat_id, text.lower())
+            draw.text((x, y), text, fill=color, font=font)
+            x += width * 10 + 15  # 10x scale
+        y += 30
+        x = 7
+
+    image.save(img)
+
+
+async def get_column_widths(schedule) -> list:
     # create a list with max lengths each line in column
     column_widths = []
     for i, col in enumerate(schedule.columns):
@@ -190,17 +212,23 @@ async def generate_image(chat_id, schedule, img) -> None:
 
         column_widths.append(width)
 
+    return column_widths
+
+
+async def get_image_config(chat_id, schedule, column_widths) -> PIL.Image:
     # get user color settings
     color_str = await db.get_db_data(chat_id, 'schedule_bg_color')
     color = tuple(int(i) for i in color_str.split(','))
 
-    # configure image
+    # configure image size
     width = sum(column_widths) * 11 + 17  # 10x scale
     height = (9 if len(schedule) != 3 else 7) * 28  # line height  30x scale
     image = Image.new("RGB", (width, height), color)
-    draw = ImageDraw.Draw(image)
 
-    # configure font
+    return image
+
+
+async def get_font_config() -> PIL.ImageFont:
     if system_type == "Windows":
         font = ImageFont.truetype("arial.ttf", 18)
     elif system_type == "Linux":
@@ -211,21 +239,8 @@ async def generate_image(chat_id, schedule, img) -> None:
         )
     else:
         font = ImageFont.load_default()  # who know xd
-
-    # set default coords for text
-    x, y = 7, 10
-
-    # generate image
-    for index, row in schedule.iterrows():
-        for col, width in enumerate(column_widths):
-            text = str(row[col + 1])
-            color = await get_color_for_lesson(chat_id, text.lower())
-            draw.text((x, y), text, fill=color, font=font)
-            x += width * 10 + 15  # 10x scale
-        y += 30
-        x = 7
-
-    image.save(img)
+    print(type(font))
+    return font
 
 
 # pull schedule of day from dataframe
