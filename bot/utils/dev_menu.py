@@ -1,4 +1,3 @@
-import re
 import asyncio
 
 from typing import Union
@@ -82,41 +81,41 @@ async def send_announce(message: Message) -> None:
 """
 
 
-async def check_date(message: Message) -> str:
-    pattern = re.compile(r'(?:|-)(\d{2}.\d{2}.\d{2})(-(\d{2}.\d{2}.\d{2}))?$')
+async def handle_dates(message: Message, old_dates: set) -> set:
     new_date = message.text
-
-    if bool(pattern.match(new_date)):
-        return new_date
-
-    msg = await bot.send_message(message.chat.id, 'Неправильный формат')
-
-    await asyncio.sleep(2)
-    await bot.delete_message(message.chat.id, msg.message_id)
-    return ''
-
-
-async def format_dates(dates: set, new_date: str) -> set:
     remove = new_date.startswith('-')
     if remove:
         new_date = new_date[1:]
     new_date = new_date.split('-')
 
-    if len(new_date) > 1:
-        start_date = datetime.strptime(new_date[0], '%d.%m.%y')
-        end_date = datetime.strptime(new_date[1], '%d.%m.%y')
+    try:
+        if len(new_date) > 1:
+            start = datetime.strptime(new_date[0], '%d.%m.%y')
+            end = datetime.strptime(new_date[1], '%d.%m.%y')
 
-        delta = (end_date - start_date).days
-        date_range = [end_date - timedelta(days=x) for x in range(delta + 1)]
+            delta = (end - start).days
+            date_range = [end - timedelta(days=x) for x in range(delta + 1)]
 
-        new_date = [day.strftime("%d.%m.%y") for day in date_range]
+            new_date = [day.strftime("%d.%m.%y") for day in date_range]
+
+        else:
+            date = datetime.strptime(new_date[0], '%d.%m.%y')
+            new_date = [date.strftime("%d.%m.%y")]
+
+    except ValueError as e:
+        custom_logger.error(message.chat.id, f'set suspend dates error: {e}')
+        msg = await bot.send_message(message.chat.id, 'Неправильный формат')
+
+        await asyncio.sleep(2)
+        await bot.delete_message(message.chat.id, msg.message_id)
+        return {'error'}
 
     if remove:
-        dates -= set(new_date)
+        old_dates -= set(new_date)
     else:
-        dates |= set(new_date)
+        old_dates |= set(new_date)
 
-    return dates
+    return old_dates
 
 
 async def purge_old_suspend_dates(dates: set) -> set:
@@ -133,19 +132,24 @@ async def save_dates(dates: set) -> None:
     await db.update_dev_data(suspend_date=dates)
 
 
-async def suspend_date(query: CallbackQuery) -> None:
-    chat_id = query.message.chat.id
-    custom_logger.debug(chat_id)
+async def suspend_date(query: Union[Message, CallbackQuery]) -> None:
+    if type(query) is CallbackQuery:
+        chat_id = query.message.chat.id  # get chat_id
+    else:
+        chat_id = query.chat.id
 
+    custom_logger.debug(chat_id)
+    dates = await db.get_dev_data('suspend_date')
     txt = (
         'Чтобы добавить даты в список, отправьте дату или диапазон дат через '
         'знак "-". Чтобы удалить даты из списка, поставьте знак "-" перед '
         'датой начале сообщения\n\nПримеры:\n'
         '`01.01.25` - Добавить 1 Января 2025 в список\n'
         '`-01.01.25` - Убрать 1 Января 2025 из списка\n'
-        '`07.04.24-20.04.25` - Добавить даты с 7 по 20 апреля 2025 в список\n'
-        '`-07.04.24-20.04.25` - Убрать даты с 7 по 20 апреля 2025 из списка\n\n'
-        '_Бот не даст добавить дату которая ужа прошла_'
+        '`07.04.25-20.04.25` - Добавить даты с 7 по 20 апреля 2025 в список\n'
+        '`-07.04.25-20.04.25` - Убрать даты с 7 по 20 апреля 2025 из списка\n'
+        '*Бот не даст добавить дату которая ужа прошла.*\n\n'
+        f'Даты приостановки: \n{dates}'
     )
 
     status_id = await db.get_status_msg_id(chat_id)
@@ -162,16 +166,13 @@ async def set_suspend_date(message: Message) -> bool:
     custom_logger.debug(message.chat.id)
     await del_msg_by_id(message.chat.id, message.message_id)
 
-    dates = await db.get_dev_data('suspend_date')
-    dates = set(dates.split(', ') if dates else dates)
-    new_date = await check_date(message)
-    if not new_date:
+    db_data = await db.get_dev_data('suspend_date')
+    old_dates = set(db_data.split(', ') if db_data else db_data)
+    dates = await handle_dates(message, old_dates)
+    if dates == {'error'}:
         return False
 
-    dates = await format_dates(dates, new_date)
     await purge_old_suspend_dates(dates)
     await save_dates(dates)
-    await dev_settings(message)
-
+    await suspend_date(message)
     return True
-

@@ -6,7 +6,7 @@ from aiogram import exceptions
 from main import bot
 from bot.database.database import db
 from bot.keyboards import keyboards as kb
-from bot.config.config import classes_dict, schedule_auto_send_delay
+from bot.config.config import classes_dict
 from bot.logs.log_config import custom_logger
 from bot.exceptions.exceptions import retry_after
 from bot.utils.messages import del_msg_by_db_name, clear_chat
@@ -71,7 +71,7 @@ async def edit_status(args) -> None:
             custom_logger.error(chat_id, f'<y>edit error: <r>{e}</></>')
             await resend_status(args, clean=1)
 
-    except exceptions.TelegramNetworkError as e:
+    except exceptions.TelegramNetworkError:
         return
 
     except Exception as e:
@@ -121,11 +121,9 @@ async def status_message_text(chat_id: int, settings: bool = False) -> str:
         chat_id,
         'del_old_schedule',
         'pin_schedule_message',
-        'schedule_auto_send',
         'school_class',
     )
-    (del_old_schedule, pin_schedule_message, auto_send,
-     school_class) = data
+    del_old_schedule, pin_schedule_message, school_class = data
 
     data = await db.get_data_by_cls(
         chat_id,
@@ -135,26 +133,23 @@ async def status_message_text(chat_id: int, settings: bool = False) -> str:
     )
     last_printed_change_time, last_check_schedule = data
 
+    from bot.filters.filters import AutoSendFilter
+    autosend = await AutoSendFilter(chat_id).filter()
     formatted_class = classes_dict[school_class[:-1]]
-    delay = schedule_auto_send_delay
-    if auto_send:
-        auto_send_msg = f'🟢 Включена, проверка выполняется раз в {delay} минут'
-    else:
-        auto_send_msg = '🔴 Выключена'
+    autosend_states_list = ['🔴 Выключено', '🟠 Приостановлено', '🟢 Включено']
 
     status_message = (
         f"🔍 Проверка расписания: {last_check_schedule}\n"
         f"📅 Изменение расписания: {last_printed_change_time}\n\n"
         f"🎓 Класс: {formatted_class}\n"
-        f"⏳ Автоматическая проверка расписания: \n"
-        f"{auto_send_msg}"
+        f"🔄 Автообновление: {autosend_states_list[autosend]}"
     )
 
     settings_message = (
         f'🎓 Класс: {formatted_class}\n'
         f'📌 Закреплять расписание: {["🔴", "🟢"][pin_schedule_message]}\n'
         f'🗑️ Удалять предыдущее расписание: {["🔴", "🟢"][del_old_schedule]}\n'
-        f'⏳ Автоматическое обновление: {["🔴", "🟢"][auto_send]}\n\n'
+        f'🔄 Автообновление: {["🔴", "🟠", "🟢"][autosend]}\n\n'
         '_Информацию по всем параметрам можно получить по кнопке '
         '"Информация о боте"_'
     )

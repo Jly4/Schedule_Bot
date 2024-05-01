@@ -38,4 +38,3 @@ async def update_schedule_call(query: CallbackQuery) -> None:
 async def choose_class_call(query: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(MainStates.choose_class)
     await choose_class_number(query.message.chat.id)
-

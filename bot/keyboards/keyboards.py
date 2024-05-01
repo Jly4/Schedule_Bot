@@ -141,9 +141,9 @@ def dev_settings(menu: bool = 0) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
 
     buttons = {
-        'announce': 'Рассылка',
-        'suspend_date': 'Даты приостановки',
         'suspend_bot': 'Приостановить бота',
+        'suspend_date': 'Даты приостановки',
+        'announce': 'Рассылка',
     }
 
     if menu:

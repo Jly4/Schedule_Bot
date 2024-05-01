@@ -6,10 +6,11 @@ from main import bot
 from bot.database.database import db
 from bot.utils.status import send_status
 from bot.keyboards import keyboards as kb
-from bot.config.config import classes_dict
+from bot.config.config import classes_dict, schedule_auto_send_delay
 from bot.logs.log_config import custom_logger
 from bot.utils.messages import del_msg_by_id
 from bot.utils.utils import run_task_if_disabled, add_change_to_class
+from bot.filters.filters import AutoSendFilter
 
 
 async def auto_send_menu(query: CallbackQuery = 0, chat_id: int = 0) -> None:
@@ -24,11 +25,14 @@ async def auto_send_menu(query: CallbackQuery = 0, chat_id: int = 0) -> None:
     threads.append(cls)
 
     classes = [classes_dict[cls[:-1]] for cls in reversed(threads)]
-    autosend = await db.get_db_data(chat_id, 'schedule_auto_send')
+    autosend = await AutoSendFilter(chat_id).filter()
+    autosend_states_list = ['🔴 Выключено', '🟠 Приостановлено', '🟢 Включено']
+    autosend_delay = schedule_auto_send_delay
     txt = (
         'Меню настройки автоматического обновление расписания\n\n'
         f'🎓 Класс(ы): {", ".join(classes)}\n'
-        f'⏳ Автоматическое обновление: {["🔴", "🟢"][autosend]}'
+        f'🔄 Автообновление: {autosend_states_list[autosend]}\n'
+        f"⏳ Проверка выполняется раз в {autosend_delay} минут"
     )
     await send_status(
         chat_id,
@@ -100,4 +104,5 @@ async def turn_schedule(callback_query: CallbackQuery) -> None:
         await db.update_db_data(chat_id, schedule_auto_send=1)
 
         await auto_send_menu(chat_id=chat_id)
+        await asyncio.sleep(1)
         await run_task_if_disabled(chat_id, 'schedule_auto_send')

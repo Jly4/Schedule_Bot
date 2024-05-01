@@ -100,13 +100,15 @@ async def lesson_color_call(query: CallbackQuery, state: FSMContext) -> None:
 
 
 @router.callback_query(F.data.startswith('set_color_'), MainStates.bg_color)
-async def set_bg_color_call(query: CallbackQuery) -> None:
-    await set_color(query, target='bg')
+async def set_bg_color_call(query: CallbackQuery, state: FSMContext) -> None:
+    if await set_color(query, target='bg'):
+        await state.clear()
 
 
 @router.callback_query(F.data.startswith('set_color_'), MainStates.text_color)
-async def set_bg_color_call(query: CallbackQuery) -> None:
-    await set_color(query, target='text')
+async def set_bg_color_call(query: CallbackQuery, state: FSMContext) -> None:
+    if await set_color(query, target='text'):
+        await state.clear()
 
 """ message handlers """
 
@@ -271,9 +273,8 @@ async def send_announce_call(message: Message, state: FSMContext) -> None:
 
 
 @router.message(MainStates.suspend_date, IsDev())
-async def set_suspend_date_call(message: Message, state: FSMContext) -> None:
-    if await set_suspend_date(message):
-        await state.clear()
+async def set_suspend_date_call(message: Message) -> None:
+    await set_suspend_date(message)
 
 
 """ back_button handlers

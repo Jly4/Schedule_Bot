@@ -42,16 +42,16 @@ async def schedule_auto_send(chat_id: int, cls: str) -> None:
     if autosend filter == 2 > normal working
     """
     custom_logger.debug(chat_id)
-    autosend = AutoSendFilter(chat_id)
-    autosend_filter = await autosend.filter()
+    autosend_filter = await AutoSendFilter(chat_id).filter()
 
     while autosend_filter:
         if autosend_filter == 2:
             await old_data_cleaner()  # clean bot/data folder from old files
             await send_schedule(chat_id, cls=cls)
 
+        await send_status(chat_id)
         await asyncio.sleep(schedule_auto_send_delay * 60)
-        autosend_filter = await autosend.filter()
+        autosend_filter = await AutoSendFilter(chat_id).filter()
 
 
 async def send_schedule(
@@ -123,9 +123,6 @@ async def send_schedule(
             last_print_time_hour=local_date.hour,
             last_print_time=last_print_time
         )
-
-    await asyncio.sleep(0.5)
-    await send_status(chat_id)
 
 
 async def send_schedule_image(chat_id, txt, schedule_img) -> Optional[Message]:
@@ -291,13 +288,13 @@ async def update_schedule(chat_id, schedule_day, cls) -> list:
 async def del_old_schedule(chat_id, cls) -> None:
     """ if user have enabled 'del_old_schedule' delete previous schedule """
     del_parameter = await db.get_db_data(chat_id, 'del_old_schedule')
+    msg_id = await db.get_data_by_cls(
+        chat_id,
+        cls,
+        'last_schedule_message_id'
+    )
 
-    if del_parameter:
-        msg_id = await db.get_data_by_cls(
-            chat_id,
-            cls,
-            'last_schedule_message_id'
-        )
+    if del_parameter and msg_id:
         await del_msg_by_id(chat_id, msg_id)
 
 

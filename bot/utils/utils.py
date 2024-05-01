@@ -182,7 +182,6 @@ async def run_task_if_disabled(chat_id: int, task: str) -> None:
 
     for thread in threads:
         task_name = f'{chat_id}_{task}_{thread}'
-
         if await task_already_run(chat_id, task_name):
             continue
 
@@ -195,9 +194,9 @@ async def run_task_if_disabled(chat_id: int, task: str) -> None:
                 name=task_name
             )
         else:
-            custom_logger.error(chat_id, f'<y>Wrong task: <r>{task}</></>')
-
-        await asyncio.sleep(60)
+            custom_logger.critical(chat_id, f'<y>Wrong task: <r>{task}</></>')
+        # sleep time before starting the next thread(school_class)
+        await asyncio.sleep(30)
 
 
 async def old_data_cleaner() -> None:
@@ -236,7 +235,3 @@ async def add_change_to_class(school_class: str) -> str:
         school_class += '1'
 
     return school_class
-
-
-
-

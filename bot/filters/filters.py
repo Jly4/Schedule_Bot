@@ -67,7 +67,7 @@ class AutoSendFilter:
         self.chat_id = chat_id
 
     async def filter(self) -> int:
-        if await self.bot_and_autosend():
+        if not await self.parameters_enabled():
             return 0
 
         if await db.get_dev_data('suspend_bot'):
@@ -78,7 +78,7 @@ class AutoSendFilter:
 
         return 2
 
-    async def bot_and_autosend(self) -> int:
+    async def parameters_enabled(self) -> bool:
         conditions = await db.get_db_data(
             self.chat_id,
             'schedule_auto_send',
@@ -89,8 +89,9 @@ class AutoSendFilter:
             custom_logger.debug(
                 self.chat_id,
                 f'cond: {conditions[0], conditions[1]}')
-
             return False
+
+        return True
 
     @staticmethod
     async def time_filter() -> int:

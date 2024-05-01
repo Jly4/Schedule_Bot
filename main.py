@@ -1,12 +1,11 @@
 import asyncio
 
 from aiogram import Bot, Dispatcher
-from aiogram.enums import ParseMode
 
 from bot.config.config import token
 
 
-bot = Bot(token=token, parse_mode=ParseMode.HTML)
+bot = Bot(token=token)
 dp = Dispatcher()
 
 
