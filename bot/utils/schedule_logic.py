@@ -36,9 +36,9 @@ class ScheduleLogic:
             return 0  # If today is Sunday, return Monday
 
         if day_of_week == 5:
-            if hour < 12:
-                return 5  # If Saturday before noon, return Saturday
-            return 0  # If Saturday after noon, return Monday
+            if hour < 10:
+                return 5  # If Saturday before 11, return Saturday
+            return 0  # If Saturday and hour > 9, return Monday
 
         if hour > 14:
             return day_of_week + 1  # If after 2 PM, return tomorrow
@@ -67,14 +67,14 @@ class ScheduleLogic:
     async def weekend_filter() -> bool:
         """ weekend filter for schedule sending
             if 1 or 2 -> True (skip sending)
-            1. if saturday and hour > 12
+            1. if saturday and hour > 9
             2. if sunday and hour < 20
         """
         local_date = datetime.now(local_timezone)
         day_of_week = local_date.weekday()
         hour = local_date.hour
 
-        if day_of_week == 5 and hour > 12:
+        if day_of_week == 5 and hour >= 10:
             return True
 
         if day_of_week == 6 and hour < 20:

@@ -184,8 +184,12 @@ async def generate_image(chat_id, schedule, img) -> None:
     x, y = 7, 10
     # generate image
     for index, row in schedule.iterrows():
-        for col, width in enumerate(column_widths):
-            text = str(row[col + 1])
+        color = await get_color_for_lesson(chat_id, str(index).lower())
+        draw.text((x, y), str(index), fill=color, font=font)
+        x += 18
+
+        for col, width in enumerate(column_widths, 1):
+            text = str(row[col])
             color = await get_color_for_lesson(chat_id, text.lower())
             draw.text((x, y), text, fill=color, font=font)
             x += width * 10 + 15  # 10x scale
@@ -201,9 +205,9 @@ async def get_column_widths(schedule) -> list:
     for i, col in enumerate(schedule.columns):
         width = schedule[col].astype(str).apply(len).max()
         if i == 0:
-            width -= 3
+            width -= 3  # time column width -3
         elif i == 1:
-            width += 2
+            width += 2  # lesson column width +2
         else:
             width = 33 - sum(column_widths) // 2 if width < 4 else width
 
@@ -218,7 +222,9 @@ async def get_image_config(chat_id, schedule, column_widths) -> PIL.Image:
     color = tuple(int(i) for i in color_str.split(','))
 
     # configure image size
-    width = sum(column_widths) * 11 + 17  # 10x scale
+    print(sum(column_widths))
+
+    width = (sum(column_widths) + 3) * 11   # scale
     height = (9 if len(schedule) != 3 else 7) * 28  # line height  30x scale
     image = Image.new("RGB", (width, height), color)
 
@@ -236,7 +242,7 @@ async def get_font_config() -> PIL.ImageFont:
         )
     else:
         font = ImageFont.load_default()  # who know xd
-    print(type(font))
+
     return font
 
 

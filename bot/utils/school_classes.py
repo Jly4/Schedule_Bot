@@ -60,6 +60,7 @@ async def set_class(callback_query: CallbackQuery) -> None:
     text = f'Установлен {formatted_class} класс'
     await send_status(chat_id, text=text, reply_markup=None)
 
-    # send schedule for new class
+    # send schedule for new class and update status
     await asyncio.sleep(1.5)
     await send_schedule(chat_id, now=1)
+    await send_status(chat_id)
